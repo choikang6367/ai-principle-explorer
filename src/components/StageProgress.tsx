@@ -1,5 +1,8 @@
 const learningStages = [
+  'AI 사용법',
+  '주제 고르기',
   '질문 고르기',
+  '직접 물어보기',
   '미리 배우기',
   '나누기',
   'Transformer',

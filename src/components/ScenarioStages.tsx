@@ -145,7 +145,7 @@ export function TokenizeStage({
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="tokenize-title">
-      <ScenarioTopline label="네 번째 장면 / 입력 나누기" current={2} />
+      <ScenarioTopline label="여섯 번째 장면 / 입력 나누기" current={5} />
       <ScenarioHeading
         category={category}
         kicker="TOKENIZATION"
@@ -216,7 +216,7 @@ export function TransformerStage({
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="transformer-title">
-      <ScenarioTopline label="다섯 번째 장면 / 다음 말 고르기" current={3} />
+      <ScenarioTopline label="일곱 번째 장면 / 다음 말 고르기" current={6} />
       <ScenarioHeading
         category={category}
         kicker="다음 말 고르기"
@@ -296,7 +296,7 @@ export function AttentionStage({
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="attention-title">
-      <ScenarioTopline label="여섯 번째 장면 / 참고하기" current={4} />
+      <ScenarioTopline label="여덟 번째 장면 / 참고하기" current={7} />
       <ScenarioHeading
         category={category}
         kicker="ATTENTION"
@@ -445,7 +445,7 @@ export function PredictionStage({
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="prediction-title">
-      <ScenarioTopline label="일곱 번째 장면 / 다음 말 예측" current={5} />
+      <ScenarioTopline label="아홉 번째 장면 / 다음 말 예측" current={8} />
       <ScenarioHeading
         category={category}
         kicker="NEXT WORD"
@@ -549,7 +549,7 @@ export function CompareStage({
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="compare-title">
-      <ScenarioTopline label="아홉 번째 장면 / 선택 비교" current={8} />
+      <ScenarioTopline label="열두 번째 장면 / 선택 비교" current={11} />
       <ScenarioHeading
         category={category}
         kicker="COMPARE"
@@ -629,7 +629,7 @@ export function CompleteStage({
 }) {
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="complete-title">
-      <ScenarioTopline label="마지막 장면 / 답변 완성" current={9} />
+      <ScenarioTopline label="마지막 장면 / 답변 완성" current={12} />
       <ScenarioHeading
         category={category}
         kicker="COMPLETE"

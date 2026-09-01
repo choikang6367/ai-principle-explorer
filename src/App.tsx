@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableR
 import { GenerationStage, LearningStage, ReviewStage } from './components/AIProcessStages'
 import { CategoryGlyph } from './components/CategoryGlyph'
 import { ExplorerOrb } from './components/ExplorerOrb'
+import { AIUsageStage, AskQuestionStage } from './components/OnboardingStages'
 import {
   AttentionStage,
   CompareStage,
@@ -34,9 +35,11 @@ function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: ()
 }
 
 const previousStageByStage: Partial<Record<StageId, StageId>> = {
-  categories: 'welcome',
+  intro: 'welcome',
+  categories: 'intro',
   questions: 'categories',
-  learning: 'questions',
+  ask: 'questions',
+  learning: 'ask',
   tokenize: 'learning',
   transformer: 'tokenize',
   attention: 'transformer',
@@ -49,8 +52,10 @@ const previousStageByStage: Partial<Record<StageId, StageId>> = {
 
 const globalEnterSelectorByStage: Partial<Record<StageId, string>> = {
   welcome: '.welcome-stage .primary-button',
+  intro: '.scenario-stage-actions .primary-button:not(:disabled)',
   categories: '.selection-panel__action:not(:disabled)',
   questions: '.selection-panel__action:not(:disabled)',
+  ask: '.scenario-stage-actions .primary-button:not(:disabled)',
   learning: '.scenario-stage-actions .primary-button:not(:disabled)',
   tokenize: '.scenario-stage-actions .primary-button:not(:disabled)',
   transformer: '.transformer-walkthrough__actions .primary-button:not(:disabled)',
@@ -121,14 +126,14 @@ function WelcomeStage({
           AI 원리 탐험 <span className="eyebrow__slash">/</span> 초등 6학년
         </p>
         <h1 id="welcome-title">
-          AI는 어떻게
+          생성형 AI는
           <br />
-          <span>다음 말을 고를까?</span>
+          <span>질문에 답해요.</span>
         </h1>
         <p className="welcome-stage__description">
-          질문 하나를 골라서, AI가 답을 만들어 가는 순간을 한 장면씩 따라가 봐요.
+          먼저 질문을 입력하고 답을 받는 기본 사용법부터 알아봐요.
           <br className="desktop-only" />
-          직접 고른 말과 AI의 선택을 나란히 비교할 수 있어요. <strong>150개 질문</strong>으로 연습해 봐요.
+          그다음 완성된 질문 하나를 골라, 답이 만들어지는 과정을 차근차근 따라가 봐요.
         </p>
         <div className="welcome-stage__actions">
           <button
@@ -138,7 +143,7 @@ function WelcomeStage({
             onClick={onStart}
             onKeyDown={(event) => handleButtonKeyDown(event, onStart)}
           >
-            탐험 시작
+            AI 사용법 보기
             <span className="primary-button__arrow" aria-hidden="true">
               ↗
             </span>
@@ -151,17 +156,17 @@ function WelcomeStage({
         <div className="principle-strip" aria-label="체험에서 살펴볼 원리">
           <div className="principle-strip__item">
             <span className="principle-strip__number">01</span>
-            <span>입력 나누기</span>
+            <span>질문 입력</span>
           </div>
           <span className="principle-strip__connector" aria-hidden="true" />
           <div className="principle-strip__item">
             <span className="principle-strip__number">02</span>
-            <span>앞의 내용 참고</span>
+            <span>답변 출력</span>
           </div>
           <span className="principle-strip__connector" aria-hidden="true" />
           <div className="principle-strip__item">
             <span className="principle-strip__number">03</span>
-            <span>다음 말 예측</span>
+            <span>만드는 과정</span>
           </div>
         </div>
       </div>
@@ -267,21 +272,21 @@ function CategoryStage({
       <div className="stage-topline">
         <p className="eyebrow">
           <span className="eyebrow__marker" aria-hidden="true" />
-          탐험 준비 <span className="eyebrow__slash">/</span> 첫 번째 선택
+          두 번째 장면 <span className="eyebrow__slash">/</span> 질문 주제 고르기
         </p>
-        <StageProgress current={0} />
+        <StageProgress current={1} />
       </div>
       <div className="category-stage__heading">
         <div>
           <p className="section-kicker">START WITH A QUESTION</p>
           <h1 id="category-title">
-            어디부터 <span>궁금한가요?</span>
+            먼저 주제를 <span>골라 볼까요?</span>
           </h1>
         </div>
         <p className="category-stage__description">
           마음이 가는 주제를 하나 골라 보세요.
           <br />
-          다음 화면에서 30개의 질문 중 하나를 고르게 됩니다.
+          다음 화면에서 준비된 질문 중 하나를 골라 직접 물어봅니다.
         </p>
       </div>
       <div className="category-layout">
@@ -412,7 +417,7 @@ function QuestionCard({
             />
           ))}
         </span>
-        <span>한 장면씩 탐험</span>
+        <span>직접 물어보기</span>
       </span>
     </button>
   )
@@ -467,23 +472,23 @@ function QuestionStage({
       <div className="stage-topline">
         <p className="eyebrow">
           <span className="eyebrow__marker" aria-hidden="true" />
-          질문 연구소 <span className="eyebrow__slash">/</span> 두 번째 선택
+          세 번째 장면 <span className="eyebrow__slash">/</span> 완성된 질문 고르기
         </p>
-        <StageProgress current={0} />
+        <StageProgress current={2} />
       </div>
       <div className="question-stage__heading">
         <div>
           <p className="section-kicker">{category.englishLabel}</p>
           <h1 id="question-title">
-            어떤 질문이
+            어떤 질문을
             <br />
-            <span>궁금한가요?</span>
+            <span>직접 물어볼까요?</span>
           </h1>
         </div>
         <p className="question-stage__description">
-          {category.label} 주제에서 질문 하나를 골라 보세요.
+          {category.label} 주제에서 완성된 질문 하나를 골라 보세요.
           <br />
-          고른 질문을 작은 단위로 나누며 탐험을 시작합니다. 총 {categoryScenarios.length}개예요.
+          AI가 어떻게 대답을 만드는지 보기 위해, 고른 질문을 입력창에서 직접 보내 봅니다. 총 {categoryScenarios.length}개예요.
         </p>
       </div>
       <div className={`question-type-picker ${selected ? 'has-selection' : ''}`} aria-label="질문 유형 필터">
@@ -549,7 +554,7 @@ function QuestionStage({
                 onClick={onContinue}
                 onKeyDown={(event) => handleButtonKeyDown(event, onContinue)}
               >
-                이 질문으로 탐험 시작
+                이 질문으로 직접 물어보기
                 <span aria-hidden="true">↗</span>
               </button>
             </>
@@ -565,7 +570,7 @@ function QuestionStage({
           )}
         </aside>
       </div>
-      {selected ? <MobileSelectionDock actionLabel="이 질문으로 탐험 시작" onContinue={onContinue} /> : null}
+      {selected ? <MobileSelectionDock actionLabel="이 질문으로 직접 물어보기" onContinue={onContinue} /> : null}
       <div className="stage-actions">
         <button
           className="back-button"
@@ -604,6 +609,7 @@ function App() {
   const [selectedAttentionTokenId, setSelectedAttentionTokenId] = useState<string | null>(initialProgress.selectedAttentionTokenId)
   const [studentCandidateId, setStudentCandidateId] = useState<string | null>(initialProgress.studentCandidateId)
   const [customInputTokenTexts, setCustomInputTokenTexts] = useState<readonly string[] | null>(initialProgress.selectedInputTokenTexts)
+  const [hasAskedQuestion, setHasAskedQuestion] = useState(false)
   const startButtonRef = useRef<HTMLButtonElement | null>(null)
   const categoryRefs = useRef<Array<HTMLButtonElement | null>>([])
   const scenarioRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -673,6 +679,7 @@ function App() {
   const handleCategorySelect = (categoryId: CategoryId) => {
     setSelectedCategory(categoryId)
     setSelectedScenarioId(null)
+    setHasAskedQuestion(false)
     setSelectedAttentionTokenId(null)
     setStudentCandidateId(null)
     setCustomInputTokenTexts(null)
@@ -682,6 +689,7 @@ function App() {
 
   const handleScenarioSelect = (scenarioId: string) => {
     setSelectedScenarioId(scenarioId)
+    setHasAskedQuestion(false)
     setSelectedAttentionTokenId(null)
     setStudentCandidateId(null)
     setCustomInputTokenTexts(null)
@@ -777,7 +785,12 @@ function App() {
       </header>
       <main className="stage-frame">
         {stage === 'welcome' ? (
-          <WelcomeStage onStart={() => setStage('categories')} actionRef={startButtonRef} />
+          <WelcomeStage onStart={() => setStage('intro')} actionRef={startButtonRef} />
+        ) : stage === 'intro' ? (
+          <AIUsageStage
+            onBack={() => setStage('welcome')}
+            onNext={() => setStage('categories')}
+          />
         ) : stage === 'categories' ? (
           <CategoryStage
             selectedCategory={selectedCategory}
@@ -787,7 +800,7 @@ function App() {
                 setStage('questions')
               }
             }}
-            onBack={() => setStage('welcome')}
+            onBack={() => setStage('intro')}
             categoryRefs={categoryRefs}
           />
         ) : selectedCategoryData ? (
@@ -798,17 +811,30 @@ function App() {
               onSelect={handleScenarioSelect}
               onContinue={() => {
                 if (selectedScenario) {
-                  setStage('learning')
+                  setStage('ask')
                 }
               }}
               onBack={() => setStage('categories')}
               scenarioRefs={scenarioRefs}
             />
+          ) : stage === 'ask' && selectedScenario ? (
+            <AskQuestionStage
+              scenario={selectedScenario}
+              answerText={aiCandidate?.outcome.answer ?? selectedScenario.candidates[0]?.outcome.answer ?? ''}
+              hasAsked={hasAskedQuestion}
+              onAsk={() => setHasAskedQuestion(true)}
+              onBack={() => setStage('questions')}
+              onNext={() => {
+                if (hasAskedQuestion) {
+                  setStage('learning')
+                }
+              }}
+            />
           ) : stage === 'learning' && selectedScenario ? (
             <LearningStage
               category={selectedCategoryData}
               scenario={selectedScenario}
-              onBack={() => setStage('questions')}
+              onBack={() => setStage('ask')}
               onNext={() => setStage('tokenize')}
             />
           ) : stage === 'tokenize' && selectedScenario ? (
@@ -906,6 +932,7 @@ function App() {
               onBack={() => setStage('compare')}
               onOtherQuestion={() => {
                 setSelectedScenarioId(null)
+                setHasAskedQuestion(false)
                 setSelectedAttentionTokenId(null)
                 setStudentCandidateId(null)
                 setCustomInputTokenTexts(null)
@@ -915,6 +942,7 @@ function App() {
                 clearSavedProgress()
                 setSelectedCategory(null)
                 setSelectedScenarioId(null)
+                setHasAskedQuestion(false)
                 setSelectedAttentionTokenId(null)
                 setStudentCandidateId(null)
                 setCustomInputTokenTexts(null)
@@ -926,7 +954,7 @@ function App() {
               selectedCategory={selectedCategory}
               onSelect={handleCategorySelect}
               onContinue={() => setStage('questions')}
-              onBack={() => setStage('welcome')}
+              onBack={() => setStage('intro')}
               categoryRefs={categoryRefs}
             />
           )
@@ -935,7 +963,7 @@ function App() {
             selectedCategory={selectedCategory}
             onSelect={handleCategorySelect}
             onContinue={() => setStage('questions')}
-            onBack={() => setStage('welcome')}
+            onBack={() => setStage('intro')}
             categoryRefs={categoryRefs}
           />
         )}

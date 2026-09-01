@@ -10,7 +10,7 @@ interface ProcessStageProps {
 export function LearningStage({ category, scenario, onBack, onNext }: ProcessStageProps & { onNext: () => void }) {
   return (
     <section className="scenario-stage ai-learning-stage stage-enter" aria-labelledby="learning-title">
-      <ScenarioTopline label="세 번째 장면 / AI가 미리 배우기" current={1} />
+      <ScenarioTopline label="다섯 번째 장면 / AI가 미리 배우기" current={4} />
       <ScenarioHeading
         category={category}
         kicker="MODEL TRAINING"
@@ -72,7 +72,7 @@ export function LearningStage({ category, scenario, onBack, onNext }: ProcessSta
         </aside>
       </div>
       <ScenarioActions
-        backLabel="질문 다시 고르기"
+        backLabel="직접 물어보기로 돌아가기"
         nextLabel="질문을 작은 조각으로"
         onBack={onBack}
         onNext={onNext}
@@ -101,7 +101,7 @@ export function GenerationStage({
 
   return (
     <section className="scenario-stage answer-generation-stage stage-enter" aria-labelledby="generation-title">
-      <ScenarioTopline label="일곱 번째 장면 / 한 조각씩 생성하기" current={6} />
+      <ScenarioTopline label="열 번째 장면 / 한 조각씩 생성하기" current={9} />
       <ScenarioHeading
         category={category}
         kicker="AUTOREGRESSIVE GENERATION"
@@ -198,7 +198,7 @@ export function ReviewStage({
 
   return (
     <section className="scenario-stage answer-review-stage stage-enter" aria-labelledby="review-title">
-      <ScenarioTopline label="여덟 번째 장면 / 답변 검사" current={7} />
+      <ScenarioTopline label="열한 번째 장면 / 답변 검사" current={10} />
       <ScenarioHeading
         category={category}
         kicker="CHECK BEFORE SHARING"

@@ -2,14 +2,16 @@ import { categories } from './categories.ts'
 import { getScenarioById } from './scenarios.ts'
 import type { CategoryId, StageId } from '../types/experience'
 
-export const EXPERIENCE_PROGRESS_VERSION = 4 as const
+export const EXPERIENCE_PROGRESS_VERSION = 5 as const
 export const PROGRESS_STORAGE_KEY = 'ai-principle-explorer-progress'
 const MAX_PROGRESS_STORAGE_LENGTH = 4096
 
 const stageOrder: readonly StageId[] = [
   'welcome',
+  'intro',
   'categories',
   'questions',
+  'ask',
   'learning',
   'tokenize',
   'transformer',
@@ -118,10 +120,10 @@ export function readSavedProgress(): ExperienceProgress {
     if (safeStage === 'welcome') {
       return fallback
     }
-    if (!selectedCategory && safeStage !== 'categories') {
+    if (!selectedCategory && safeStage !== 'intro' && safeStage !== 'categories') {
       safeStage = 'categories'
     }
-    if (isAtOrAfter(safeStage, 'tokenize') && !selectedScenarioId) {
+    if (isAtOrAfter(safeStage, 'ask') && !selectedScenarioId) {
       safeStage = 'questions'
     }
     if (isAtOrAfter(safeStage, 'attention') && !selectedAttentionTokenId) {

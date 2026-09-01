@@ -26,8 +26,10 @@ export interface Category {
 
 export type StageId =
   | 'welcome'
+  | 'intro'
   | 'categories'
   | 'questions'
+  | 'ask'
   | 'learning'
   | 'tokenize'
   | 'transformer'
