@@ -22,7 +22,7 @@ function imageStyle(experience: ImageExperience): CSSProperties {
 }
 
 function assetSource(path: string) {
-  return path
+  return `${import.meta.env.BASE_URL}${path}`
 }
 
 function ImageVisual({
@@ -178,9 +178,20 @@ function ImageStageActions({
 }
 
 function MiniImage({ experience }: { experience: ImageExperience }) {
+  const [assetState, setAssetState] = useState<'pending' | 'loaded' | 'failed'>('pending')
+
   return (
     <span className="mini-image" data-surface={experience.visual.background} aria-hidden="true">
-      <span>{experience.visual.emoji}</span>
+      <span className={`mini-image__fallback ${assetState === 'loaded' ? 'is-hidden' : ''}`}>
+        {experience.visual.emoji}
+      </span>
+      <img
+        className={`mini-image__asset ${assetState === 'loaded' ? 'is-visible' : ''}`}
+        src={assetSource(experience.imagePath)}
+        alt=""
+        onLoad={() => setAssetState('loaded')}
+        onError={() => setAssetState('failed')}
+      />
       <span className="mini-image__shine" />
     </span>
   )
@@ -326,7 +337,7 @@ export function ImageSelectionStage({
         </p>
         <p className="stage-note">
           <span className="stage-note__mark" aria-hidden="true">i</span>
-          사진은 나중에 같은 데이터 자리에 실제 이미지로 바꿀 수 있어요.
+          모든 사진은 공개 라이선스 자료로 구성했어요.
         </p>
       </div>
     </section>
@@ -366,7 +377,7 @@ export function ImageViewStage({
             <span>내가 먼저 생각해 보기</span>
             <h2>{experience.prompt}</h2>
           </div>
-          <ImageVisual experience={experience} className="image-view-visual" ariaLabel={`${experience.name}를 표현한 임시 이미지`} />
+          <ImageVisual experience={experience} className="image-view-visual" ariaLabel={`${experience.name} 실제 사진`} />
           <div className="image-guess-area">
             <div className="image-guess-area__topline">
               <span>MY GUESS</span>
