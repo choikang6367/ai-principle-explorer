@@ -1,6 +1,7 @@
 import { categories } from './categories.ts'
+import { getImageExperienceById, imageExperienceIds } from './imageExperiences.ts'
 import { getScenarioById } from './scenarios.ts'
-import type { CategoryId, StageId } from '../types/experience'
+import type { CategoryId, ImageExperienceId, StageId } from '../types/experience'
 
 export const EXPERIENCE_PROGRESS_VERSION = 6 as const
 export const PROGRESS_STORAGE_KEY = 'ai-principle-explorer-progress'
@@ -9,6 +10,7 @@ const LEGACY_PROGRESS_VERSION = 5
 
 const stageOrder: readonly StageId[] = [
   'welcome',
+  'conversationWelcome',
   'intro',
   'categories',
   'questions',
@@ -22,6 +24,12 @@ const stageOrder: readonly StageId[] = [
   'review',
   'compare',
   'complete',
+  'imageSelect',
+  'imageView',
+  'imageNumbers',
+  'imageFeatures',
+  'imagePrediction',
+  'imageResult',
 ]
 
 const categoryIds = new Set<CategoryId>(categories.map((category) => category.id))
@@ -35,6 +43,8 @@ export interface ExperienceProgress {
   selectedAttentionTokenId: string | null
   studentCandidateId: string | null
   hasAskedQuestion: boolean
+  selectedImageId?: ImageExperienceId | null
+  imageGuess?: string | null
 }
 
 function emptyProgress(): ExperienceProgress {
@@ -62,6 +72,14 @@ function isCategoryId(value: unknown): value is CategoryId {
   return typeof value === 'string' && categoryIds.has(value as CategoryId)
 }
 
+function isImageExperienceId(value: unknown): value is ImageExperienceId {
+  return typeof value === 'string' && imageExperienceIds.has(value as ImageExperienceId)
+}
+
+function isImageStageId(value: StageId): value is Extract<StageId, `image${string}`> {
+  return value.startsWith('image')
+}
+
 function isAtOrAfter(stage: StageId, checkpoint: StageId) {
   return stageOrder.indexOf(stage) >= stageOrder.indexOf(checkpoint)
 }
@@ -85,6 +103,25 @@ export function readSavedProgress(): ExperienceProgress {
     }
 
     const storedStage = isStageId(parsed.stage) ? parsed.stage : 'welcome'
+
+    if (isImageStageId(storedStage)) {
+      const selectedImageId = isImageExperienceId(parsed.selectedImageId) ? parsed.selectedImageId : null
+      const selectedImage = getImageExperienceById(selectedImageId)
+      const safeImageStage = storedStage !== 'imageSelect' && !selectedImage
+        ? 'imageSelect'
+        : storedStage
+      const imageGuess = selectedImage && typeof parsed.imageGuess === 'string' && selectedImage.choices.some((choice) => choice === parsed.imageGuess)
+        ? parsed.imageGuess
+        : null
+
+      return {
+        ...fallback,
+        stage: safeImageStage,
+        selectedImageId: selectedImage?.id ?? null,
+        imageGuess,
+      }
+    }
+
     const selectedCategory = isCategoryId(parsed.selectedCategory) ? parsed.selectedCategory : null
     const storedScenarioId = typeof parsed.selectedScenarioId === 'string' ? parsed.selectedScenarioId : null
     const storedScenario = storedScenarioId ? getScenarioById(storedScenarioId) : undefined
@@ -123,7 +160,7 @@ export function readSavedProgress(): ExperienceProgress {
     if (safeStage === 'welcome') {
       return fallback
     }
-    if (!selectedCategory && safeStage !== 'intro' && safeStage !== 'categories') {
+    if (!selectedCategory && safeStage !== 'conversationWelcome' && safeStage !== 'intro' && safeStage !== 'categories') {
       safeStage = 'categories'
     }
     if (isAtOrAfter(safeStage, 'ask') && !selectedScenarioId) {

@@ -12,6 +12,82 @@ export type CategoryGlyph =
   | 'science'
   | 'school'
 
+export type ImageExperienceId =
+  | 'cat'
+  | 'dog'
+  | 'fox'
+  | 'apple'
+  | 'orange'
+  | 'car'
+  | 'bus'
+  | 'face'
+  | 'bicycle'
+  | 'soccer'
+
+export type ImageAccent = 'mint' | 'violet' | 'amber' | 'coral' | 'blue' | 'lime'
+
+export type ImageFeatureKind = 'color' | 'shape' | 'detail'
+
+export type ImageFeatureMarker = 'box' | 'circle' | 'line'
+
+export interface ImagePixelSample {
+  id: string
+  x: number
+  y: number
+  r: number
+  g: number
+  b: number
+  label: string
+}
+
+export interface ImageFeature {
+  id: string
+  kind: ImageFeatureKind
+  marker: ImageFeatureMarker
+  label: string
+  description: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface ImagePrediction {
+  label: string
+  probability: number
+}
+
+export interface ImagePredictionSnapshot {
+  id: string
+  title: string
+  revealPercent: number
+  description: string
+  predictions: readonly ImagePrediction[]
+}
+
+export interface ImageVisual {
+  emoji: string
+  caption: string
+  background: string
+}
+
+export interface ImageExperience {
+  id: ImageExperienceId
+  name: string
+  englishLabel: string
+  imagePath: string
+  accent: ImageAccent
+  visual: ImageVisual
+  choices: readonly string[]
+  answer: string
+  prompt: string
+  pixelSamples: readonly ImagePixelSample[]
+  features: readonly ImageFeature[]
+  predictionSnapshots: readonly ImagePredictionSnapshot[]
+  studentTip: string
+  explanation: string
+}
+
 export type QuestionType = 'knowledge' | 'imagination' | 'opinion'
 
 export interface Category {
@@ -26,6 +102,7 @@ export interface Category {
 
 export type StageId =
   | 'welcome'
+  | 'conversationWelcome'
   | 'intro'
   | 'categories'
   | 'questions'
@@ -39,6 +116,12 @@ export type StageId =
   | 'review'
   | 'compare'
   | 'complete'
+  | 'imageSelect'
+  | 'imageView'
+  | 'imageNumbers'
+  | 'imageFeatures'
+  | 'imagePrediction'
+  | 'imageResult'
 
 export type TokenKind = 'word' | 'punctuation'
 

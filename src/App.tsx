@@ -12,7 +12,16 @@ import {
   TransformerStage,
 } from './components/ScenarioStages'
 import { StageProgress } from './components/StageProgress'
+import {
+  ImageFeaturesStage,
+  ImageNumbersStage,
+  ImagePredictionStage,
+  ImageResultStage,
+  ImageSelectionStage,
+  ImageViewStage,
+} from './components/ImageExperienceStages'
 import { categories } from './data/categories'
+import { getImageExperienceById, imageExperiences } from './data/imageExperiences'
 import {
   EXPERIENCE_PROGRESS_VERSION,
   clearSavedProgress,
@@ -25,7 +34,7 @@ import { adaptAttentionTargets, getScenarioById, getScenariosForCategory } from 
 import { createContextualCandidates, runTransformer } from './transformer/engine'
 import { generateAnswer, reviewGeneratedAnswer } from './transformer/generation'
 import { useViewportProfile } from './hooks/useViewportProfile'
-import type { Category, CategoryId, InputToken, QuestionType, Scenario, StageId } from './types/experience'
+import type { Category, CategoryId, ImageExperienceId, InputToken, QuestionType, Scenario, StageId } from './types/experience'
 
 function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: () => void) {
   if (event.key === 'Enter' || event.key === ' ') {
@@ -35,7 +44,8 @@ function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: ()
 }
 
 const previousStageByStage: Partial<Record<StageId, StageId>> = {
-  intro: 'welcome',
+  conversationWelcome: 'welcome',
+  intro: 'conversationWelcome',
   categories: 'intro',
   questions: 'categories',
   ask: 'questions',
@@ -48,10 +58,16 @@ const previousStageByStage: Partial<Record<StageId, StageId>> = {
   review: 'generation',
   compare: 'review',
   complete: 'compare',
+  imageView: 'imageSelect',
+  imageNumbers: 'imageView',
+  imageFeatures: 'imageNumbers',
+  imagePrediction: 'imageFeatures',
+  imageResult: 'imagePrediction',
 }
 
 const globalEnterSelectorByStage: Partial<Record<StageId, string>> = {
-  welcome: '.welcome-stage .primary-button',
+  welcome: '.home-stage .mode-card:not(:disabled)',
+  conversationWelcome: '.welcome-stage .primary-button',
   intro: '.scenario-stage-actions .primary-button:not(:disabled)',
   categories: '.selection-panel__action:not(:disabled)',
   questions: '.selection-panel__action:not(:disabled)',
@@ -64,6 +80,11 @@ const globalEnterSelectorByStage: Partial<Record<StageId, string>> = {
   generation: '.scenario-stage-actions .primary-button:not(:disabled)',
   review: '.scenario-stage-actions .primary-button:not(:disabled)',
   compare: '.scenario-stage-actions .primary-button:not(:disabled)',
+  imageSelect: '.image-selection-start:not(:disabled)',
+  imageView: '.image-stage-actions .primary-button:not(:disabled)',
+  imageNumbers: '.image-stage-actions .primary-button:not(:disabled)',
+  imageFeatures: '.image-stage-actions .primary-button:not(:disabled)',
+  imagePrediction: '.image-stage-actions .primary-button:not(:disabled)',
 }
 
 function findVisibleButton(selector: string) {
@@ -108,6 +129,95 @@ function MobileSelectionDock({
         <span aria-hidden="true">↗</span>
       </button>
     </div>
+  )
+}
+
+function HomeStage({
+  onChooseConversation,
+  onChooseImage,
+  firstCardRef,
+}: {
+  onChooseConversation: () => void
+  onChooseImage: () => void
+  firstCardRef: RefObject<HTMLButtonElement | null>
+}) {
+  return (
+    <section className="home-stage stage-enter" aria-labelledby="home-title">
+      <div className="home-stage__topline">
+        <p className="eyebrow">
+          <span className="eyebrow__marker" aria-hidden="true" />
+          AI 원리 탐험 <span className="eyebrow__slash">/</span> 두 가지 체험
+        </p>
+        <span className="home-stage__status"><span className="status-dot" aria-hidden="true" /> READY TO EXPLORE</span>
+      </div>
+      <div className="home-stage__heading">
+        <div>
+          <p className="section-kicker">CHOOSE YOUR WAY IN</p>
+          <h1 id="home-title" tabIndex={-1}>
+            생성형 AI를
+            <br />
+            <span>두 가지 눈으로 봐요.</span>
+          </h1>
+        </div>
+        <p className="home-stage__description">
+          AI는 어떻게 말을 만들고, 사진 속 대상을 알아볼까요?
+          <br />
+          궁금한 체험을 하나 골라 직접 따라가 봐요.
+        </p>
+      </div>
+      <div className="mode-grid" aria-label="생성형 AI 체험 선택">
+        <button
+          ref={firstCardRef}
+          className="mode-card mode-card--conversation"
+          type="button"
+          onClick={onChooseConversation}
+          onKeyDown={(event) => handleButtonKeyDown(event, onChooseConversation)}
+        >
+          <span className="mode-card__topline">
+            <span>EXPERIENCE 01</span>
+            <span>WORDS / TEXT</span>
+          </span>
+          <span className="mode-card__visual mode-card__visual--conversation" aria-hidden="true">
+            <span className="mode-card__bubble mode-card__bubble--one">안녕!</span>
+            <span className="mode-card__bubble mode-card__bubble--two">다음 말은?</span>
+            <span className="mode-card__signal">↗</span>
+          </span>
+          <span className="mode-card__title">대화할 때의 생성형 AI</span>
+          <span className="mode-card__description">AI는 어떻게 다음 말을 골라 문장을 만들까요?</span>
+          <span className="mode-card__footer">
+            <span>질문 → 토큰 → 예상 → 문장</span>
+            <span className="mode-card__arrow" aria-hidden="true">↗</span>
+          </span>
+        </button>
+        <button
+          className="mode-card mode-card--image"
+          type="button"
+          onClick={onChooseImage}
+          onKeyDown={(event) => handleButtonKeyDown(event, onChooseImage)}
+        >
+          <span className="mode-card__topline">
+            <span>EXPERIENCE 02</span>
+            <span>PIXELS / IMAGE</span>
+          </span>
+          <span className="mode-card__visual mode-card__visual--image" aria-hidden="true">
+            <span className="mode-card__pixel-orb">◉</span>
+            <span className="mode-card__pixel-grid" />
+            <span className="mode-card__signal">+</span>
+          </span>
+          <span className="mode-card__title">이미지를 읽을 때의 생성형 AI</span>
+          <span className="mode-card__description">AI는 사진을 어떻게 숫자로 보고 무엇인지 알아낼까요?</span>
+          <span className="mode-card__footer">
+            <span>사진 → 픽셀 → 특징 → 가능성</span>
+            <span className="mode-card__arrow" aria-hidden="true">↗</span>
+          </span>
+        </button>
+      </div>
+      <div className="home-stage__principle">
+        <span className="home-stage__principle-mark" aria-hidden="true">i</span>
+        <p>두 체험의 공통점: AI는 입력을 숫자로 바꾸고, 배운 패턴을 이용해 다음 결과를 예상해요.</p>
+        <span className="keyboard-hint"><kbd>Enter</kbd><span>첫 번째 체험 시작</span></span>
+      </div>
+    </section>
   )
 }
 
@@ -610,7 +720,11 @@ function App() {
   const [studentCandidateId, setStudentCandidateId] = useState<string | null>(initialProgress.studentCandidateId)
   const [customInputTokenTexts, setCustomInputTokenTexts] = useState<readonly string[] | null>(initialProgress.selectedInputTokenTexts)
   const [hasAskedQuestion, setHasAskedQuestion] = useState(initialProgress.hasAskedQuestion)
+  const [selectedImageId, setSelectedImageId] = useState<ImageExperienceId | null>(initialProgress.selectedImageId ?? null)
+  const [imageStudentGuess, setImageStudentGuess] = useState<string | null>(initialProgress.imageGuess ?? null)
+  const homeButtonRef = useRef<HTMLButtonElement | null>(null)
   const startButtonRef = useRef<HTMLButtonElement | null>(null)
+  const imageRefs = useRef<Array<HTMLButtonElement | null>>([])
   const categoryRefs = useRef<Array<HTMLButtonElement | null>>([])
   const scenarioRefs = useRef<Array<HTMLButtonElement | null>>([])
   const attentionRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -623,6 +737,11 @@ function App() {
     document.querySelector('.app-shell')?.scrollTo({ top: 0, left: 0 })
 
     if (stage === 'welcome') {
+      homeButtonRef.current?.focus({ preventScroll: true })
+      return
+    }
+
+    if (stage === 'conversationWelcome') {
       startButtonRef.current?.focus({ preventScroll: true })
       return
     }
@@ -640,8 +759,10 @@ function App() {
       selectedAttentionTokenId,
       studentCandidateId,
       hasAskedQuestion,
+      selectedImageId,
+      imageGuess: imageStudentGuess,
     })
-  }, [stage, selectedCategory, selectedScenarioId, customInputTokenTexts, selectedAttentionTokenId, studentCandidateId, hasAskedQuestion])
+  }, [stage, selectedCategory, selectedScenarioId, customInputTokenTexts, selectedAttentionTokenId, studentCandidateId, hasAskedQuestion, selectedImageId, imageStudentGuess])
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: WindowEventMap['keydown']) => {
@@ -707,6 +828,21 @@ function App() {
     candidateRefs.current = []
   }
 
+  const resetImageExperience = () => {
+    setSelectedImageId(null)
+    setImageStudentGuess(null)
+    imageRefs.current = []
+  }
+
+  const handleImageSelect = (imageId: string) => {
+    const imageExperience = getImageExperienceById(imageId)
+    if (!imageExperience) {
+      return
+    }
+    setSelectedImageId(imageExperience.id)
+    setImageStudentGuess(null)
+  }
+
   const handleAttentionSelect = (tokenId: string) => {
     setSelectedAttentionTokenId(tokenId)
     setStudentCandidateId(null)
@@ -715,6 +851,7 @@ function App() {
 
   const selectedCategoryData = categories.find((category) => category.id === selectedCategory)
   const selectedScenario = selectedScenarioId ? getScenarioById(selectedScenarioId) : undefined
+  const selectedImageData = getImageExperienceById(selectedImageId)
   const customInputTokens = selectedScenario && customInputTokenTexts
     ? createActiveInputTokens(selectedScenario.id, customInputTokenTexts)
     : null
@@ -759,6 +896,7 @@ function App() {
       : [],
     [generatedStudentAnswer, selectedScenario],
   )
+  const isImageFlowStage = stage === 'imageView' || stage === 'imageNumbers' || stage === 'imageFeatures' || stage === 'imagePrediction' || stage === 'imageResult'
 
   return (
     <div
@@ -795,10 +933,16 @@ function App() {
       </header>
       <main className="stage-frame">
         {stage === 'welcome' ? (
+          <HomeStage
+            onChooseConversation={() => setStage('conversationWelcome')}
+            onChooseImage={() => setStage('imageSelect')}
+            firstCardRef={homeButtonRef}
+          />
+        ) : stage === 'conversationWelcome' ? (
           <WelcomeStage onStart={() => setStage('intro')} actionRef={startButtonRef} />
         ) : stage === 'intro' ? (
           <AIUsageStage
-            onBack={() => setStage('welcome')}
+            onBack={() => setStage('conversationWelcome')}
             onNext={() => setStage('categories')}
           />
         ) : stage === 'categories' ? (
@@ -813,6 +957,81 @@ function App() {
             onBack={() => setStage('intro')}
             categoryRefs={categoryRefs}
           />
+        ) : stage === 'imageSelect' ? (
+          <ImageSelectionStage
+            experiences={imageExperiences}
+            selectedImageId={selectedImageId}
+            imageRefs={imageRefs}
+            onSelect={handleImageSelect}
+            onContinue={() => {
+              if (selectedImageData) {
+                setImageStudentGuess(null)
+                setStage('imageView')
+              }
+            }}
+            onBack={() => setStage('welcome')}
+          />
+        ) : isImageFlowStage ? (
+          selectedImageData ? (
+            stage === 'imageView' ? (
+              <ImageViewStage
+                experience={selectedImageData}
+                selectedGuess={imageStudentGuess}
+                onSelectGuess={setImageStudentGuess}
+                onBack={() => setStage('imageSelect')}
+                onNext={() => setStage('imageNumbers')}
+              />
+            ) : stage === 'imageNumbers' ? (
+              <ImageNumbersStage
+                experience={selectedImageData}
+                onBack={() => setStage('imageView')}
+                onNext={() => setStage('imageFeatures')}
+              />
+            ) : stage === 'imageFeatures' ? (
+              <ImageFeaturesStage
+                experience={selectedImageData}
+                onBack={() => setStage('imageNumbers')}
+                onNext={() => setStage('imagePrediction')}
+              />
+            ) : stage === 'imagePrediction' ? (
+              <ImagePredictionStage
+                experience={selectedImageData}
+                onBack={() => setStage('imageFeatures')}
+                onNext={() => setStage('imageResult')}
+              />
+            ) : (
+              <ImageResultStage
+                experience={selectedImageData}
+                selectedGuess={imageStudentGuess}
+                onBack={() => setStage('imagePrediction')}
+                onOtherImage={() => {
+                  setSelectedImageId(null)
+                  setImageStudentGuess(null)
+                  imageRefs.current = []
+                  setStage('imageSelect')
+                }}
+                onRestart={() => {
+                  clearSavedProgress()
+                  resetImageExperience()
+                  setStage('welcome')
+                }}
+              />
+            )
+          ) : (
+            <ImageSelectionStage
+              experiences={imageExperiences}
+              selectedImageId={selectedImageId}
+              imageRefs={imageRefs}
+              onSelect={handleImageSelect}
+              onContinue={() => {
+                if (selectedImageData) {
+                  setImageStudentGuess(null)
+                  setStage('imageView')
+                }
+              }}
+              onBack={() => setStage('welcome')}
+            />
+          )
         ) : selectedCategoryData ? (
           stage === 'questions' ? (
             <QuestionStage
