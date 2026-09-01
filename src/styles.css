@@ -669,6 +669,12 @@ kbd {
   gap: 12px;
 }
 
+@media (min-width: 901px) {
+  .stage-progress__track {
+    grid-template-columns: repeat(13, minmax(max-content, 1fr));
+  }
+}
+
 .stage-progress__item {
   display: flex;
   align-items: center;
@@ -681,6 +687,7 @@ kbd {
 
 .stage-progress__dot {
   display: block;
+  flex: 0 0 7px;
   width: 7px;
   height: 7px;
   border: 1px solid #506579;
@@ -3457,6 +3464,7 @@ kbd {
   }
 
   .stage-progress__track {
+    grid-template-columns: repeat(13, minmax(0, 1fr));
     gap: 5px;
   }
 
