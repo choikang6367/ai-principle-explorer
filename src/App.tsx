@@ -125,7 +125,7 @@ function WelcomeStage({
           <span className="eyebrow__marker" aria-hidden="true" />
           AI 원리 탐험 <span className="eyebrow__slash">/</span> 초등 6학년
         </p>
-        <h1 id="welcome-title">
+        <h1 id="welcome-title" tabIndex={-1}>
           생성형 AI는
           <br />
           <span>질문에 답해요.</span>
@@ -279,7 +279,7 @@ function CategoryStage({
       <div className="category-stage__heading">
         <div>
           <p className="section-kicker">START WITH A QUESTION</p>
-          <h1 id="category-title">
+          <h1 id="category-title" tabIndex={-1}>
             먼저 주제를 <span>골라 볼까요?</span>
           </h1>
         </div>
@@ -479,7 +479,7 @@ function QuestionStage({
       <div className="question-stage__heading">
         <div>
           <p className="section-kicker">{category.englishLabel}</p>
-          <h1 id="question-title">
+          <h1 id="question-title" tabIndex={-1}>
             어떤 질문을
             <br />
             <span>직접 물어볼까요?</span>
@@ -609,20 +609,25 @@ function App() {
   const [selectedAttentionTokenId, setSelectedAttentionTokenId] = useState<string | null>(initialProgress.selectedAttentionTokenId)
   const [studentCandidateId, setStudentCandidateId] = useState<string | null>(initialProgress.studentCandidateId)
   const [customInputTokenTexts, setCustomInputTokenTexts] = useState<readonly string[] | null>(initialProgress.selectedInputTokenTexts)
-  const [hasAskedQuestion, setHasAskedQuestion] = useState(false)
+  const [hasAskedQuestion, setHasAskedQuestion] = useState(initialProgress.hasAskedQuestion)
   const startButtonRef = useRef<HTMLButtonElement | null>(null)
   const categoryRefs = useRef<Array<HTMLButtonElement | null>>([])
   const scenarioRefs = useRef<Array<HTMLButtonElement | null>>([])
   const attentionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const candidateRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const stageChangedAtRef = useRef(0)
 
   useEffect(() => {
-    if (stage === 'welcome') {
-      startButtonRef.current?.focus()
-    }
-
+    stageChangedAtRef.current = performance.now()
     window.scrollTo({ top: 0, left: 0 })
     document.querySelector('.app-shell')?.scrollTo({ top: 0, left: 0 })
+
+    if (stage === 'welcome') {
+      startButtonRef.current?.focus({ preventScroll: true })
+      return
+    }
+
+    document.querySelector<HTMLElement>('.stage-frame h1')?.focus({ preventScroll: true })
   }, [stage])
 
   useEffect(() => {
@@ -634,8 +639,9 @@ function App() {
       selectedInputTokenTexts: customInputTokenTexts,
       selectedAttentionTokenId,
       studentCandidateId,
+      hasAskedQuestion,
     })
-  }, [stage, selectedCategory, selectedScenarioId, customInputTokenTexts, selectedAttentionTokenId, studentCandidateId])
+  }, [stage, selectedCategory, selectedScenarioId, customInputTokenTexts, selectedAttentionTokenId, studentCandidateId, hasAskedQuestion])
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: WindowEventMap['keydown']) => {
@@ -657,8 +663,12 @@ function App() {
         return
       }
 
+      if (performance.now() - stageChangedAtRef.current < 120) {
+        return
+      }
+
       const target = event.target instanceof Element ? event.target : null
-      if (target?.closest('button, a, input, textarea, select, [contenteditable="true"]')) {
+      if (target?.closest('button, a, input, textarea, select, [contenteditable="true"], [data-ignore-global-enter]')) {
         return
       }
 

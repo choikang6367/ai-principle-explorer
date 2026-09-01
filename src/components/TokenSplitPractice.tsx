@@ -106,7 +106,7 @@ export function TokenSplitPractice({
           <span className="token-practice__eyebrow">YOUR TURN / 문장 끊기</span>
           <h3 id="token-practice-title">내가 먼저 끊어 볼까요?</h3>
         </div>
-        <span className="token-practice__count" aria-live="polite">{selectedBreaks.size}곳</span>
+        <span className="token-practice__count">{selectedBreaks.size}곳</span>
       </div>
       <p className="token-practice__intro">
         글자 조각 사이의 점을 눌러, 읽기 좋은 작은 덩어리를 직접 만들어 보세요.

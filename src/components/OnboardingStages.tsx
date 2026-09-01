@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { Scenario } from '../types/experience'
 import { ScenarioActions, ScenarioTopline } from './ScenarioStages'
 
@@ -24,7 +24,7 @@ function OnboardingHeading({
     <div className="scenario-stage__heading onboarding-stage__heading">
       <div>
         <p className="section-kicker">{kicker}</p>
-        <h1 id={id}>
+        <h1 id={id} tabIndex={-1}>
           {title}
           <span className="scenario-stage__accent">{accent}</span>
         </h1>
@@ -117,6 +117,14 @@ export function AskQuestionStage({
   onBack: () => void
   onNext: () => void
 }) {
+  const answerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (hasAsked) {
+      answerRef.current?.focus({ preventScroll: true })
+    }
+  }, [hasAsked])
+
   return (
     <section className="scenario-stage onboarding-stage ask-question-stage stage-enter" aria-labelledby="ask-question-title">
       <ScenarioTopline label="네 번째 장면 / 직접 물어보기" current={3} />
@@ -143,7 +151,13 @@ export function AskQuestionStage({
               <span className="chat-message__label">선택한 완성 질문</span>
               <p>{scenario.question}</p>
             </div>
-            <div className={`ask-question-card__answer ${hasAsked ? 'is-visible' : ''}`} aria-live="polite">
+            <div
+              ref={answerRef}
+              className={`ask-question-card__answer ${hasAsked ? 'is-visible' : ''}`}
+              aria-live="polite"
+              data-ignore-global-enter
+              tabIndex={hasAsked ? -1 : undefined}
+            >
               {hasAsked ? (
                 <>
                   <span className="chat-message__label">AI의 답변</span>
@@ -158,14 +172,25 @@ export function AskQuestionStage({
             </div>
             <div className="ask-question-card__composer">
               <label className="sr-only" htmlFor="selected-question-input">AI에게 보낼 질문</label>
-              <input id="selected-question-input" type="text" value={scenario.question} readOnly />
+              <input
+                id="selected-question-input"
+                type="text"
+                value={scenario.question}
+                readOnly
+                onKeyDown={(event) => {
+                  if ((event.key === 'Enter' || event.key === 'NumpadEnter') && !hasAsked) {
+                    event.preventDefault()
+                    onAsk()
+                  }
+                }}
+              />
               <button type="button" onClick={onAsk} disabled={hasAsked}>
                 {hasAsked ? '보냈어요' : 'AI에게 물어보기'}
                 <span aria-hidden="true">↗</span>
               </button>
             </div>
           </div>
-          <div className="ask-question-card__lesson" role="status" aria-live="polite">
+          <div className="ask-question-card__lesson">
             <span className="learning-card__explanation-label">지금 일어난 일</span>
             <strong>{hasAsked ? '질문 입력 → 답변 출력' : '질문을 보내면 답변이 출력돼요.'}</strong>
             <p>{hasAsked ? '답변을 확인했으니, 이제 AI가 이 문장을 어떤 순서로 만드는지 살펴볼 수 있어요.' : '질문은 준비되어 있어요. 아래 버튼을 눌러 AI에게 직접 물어보세요.'}</p>

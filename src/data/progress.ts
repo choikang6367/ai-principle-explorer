@@ -2,9 +2,10 @@ import { categories } from './categories.ts'
 import { getScenarioById } from './scenarios.ts'
 import type { CategoryId, StageId } from '../types/experience'
 
-export const EXPERIENCE_PROGRESS_VERSION = 5 as const
+export const EXPERIENCE_PROGRESS_VERSION = 6 as const
 export const PROGRESS_STORAGE_KEY = 'ai-principle-explorer-progress'
 const MAX_PROGRESS_STORAGE_LENGTH = 4096
+const LEGACY_PROGRESS_VERSION = 5
 
 const stageOrder: readonly StageId[] = [
   'welcome',
@@ -33,6 +34,7 @@ export interface ExperienceProgress {
   selectedInputTokenTexts: readonly string[] | null
   selectedAttentionTokenId: string | null
   studentCandidateId: string | null
+  hasAskedQuestion: boolean
 }
 
 function emptyProgress(): ExperienceProgress {
@@ -44,6 +46,7 @@ function emptyProgress(): ExperienceProgress {
     selectedInputTokenTexts: null,
     selectedAttentionTokenId: null,
     studentCandidateId: null,
+    hasAskedQuestion: false,
   }
 }
 
@@ -77,7 +80,7 @@ export function readSavedProgress(): ExperienceProgress {
     }
 
     const parsed: unknown = JSON.parse(saved)
-    if (!isRecord(parsed) || parsed.version !== EXPERIENCE_PROGRESS_VERSION) {
+    if (!isRecord(parsed) || (parsed.version !== EXPERIENCE_PROGRESS_VERSION && parsed.version !== LEGACY_PROGRESS_VERSION)) {
       return fallback
     }
 
@@ -133,6 +136,13 @@ export function readSavedProgress(): ExperienceProgress {
       safeStage = 'prediction'
     }
 
+    const hasAskedQuestion = Boolean(
+      selectedScenarioId &&
+      isAtOrAfter(safeStage, 'ask') &&
+      parsed.version === EXPERIENCE_PROGRESS_VERSION &&
+      parsed.hasAskedQuestion === true,
+    )
+
     return {
       version: EXPERIENCE_PROGRESS_VERSION,
       stage: safeStage,
@@ -141,6 +151,7 @@ export function readSavedProgress(): ExperienceProgress {
       selectedInputTokenTexts: isAtOrAfter(safeStage, 'tokenize') ? selectedInputTokenTexts : null,
       selectedAttentionTokenId: isAtOrAfter(safeStage, 'attention') ? selectedAttentionTokenId : null,
       studentCandidateId: isAtOrAfter(safeStage, 'prediction') ? studentCandidateId : null,
+      hasAskedQuestion,
     }
   } catch {
     return fallback

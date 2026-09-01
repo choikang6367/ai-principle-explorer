@@ -30,7 +30,7 @@
 html {
   min-width: 320px;
   background: var(--night);
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -38,7 +38,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 button {
@@ -54,7 +54,7 @@ button:focus-visible {
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: hidden;
+  overflow: clip;
   isolation: isolate;
   --page-gutter: 32px;
   --action-gutter: 32px;
@@ -3267,6 +3267,7 @@ kbd {
     display: flex;
     flex-direction: column;
     grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .question-type-picker {
@@ -3517,9 +3518,9 @@ kbd {
   }
 
   .token-practice__break {
-    width: 17px;
-    min-width: 17px;
-    height: 28px;
+    width: 24px;
+    min-width: 24px;
+    height: 32px;
   }
 
   .token-practice__result {
@@ -4506,6 +4507,13 @@ kbd {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 320px) {
+  html,
+  body {
+    min-width: 0;
   }
 }
 

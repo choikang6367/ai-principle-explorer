@@ -30,6 +30,7 @@ const emptyProgress = {
   selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
+  hasAskedQuestion: false,
 }
 
 function setSavedProgress(value) {
@@ -80,6 +81,40 @@ assert.deepEqual(
 assert.deepEqual(
   readWith({
     version: EXPERIENCE_PROGRESS_VERSION,
+    stage: 'ask',
+    selectedCategory: 'animal',
+    selectedScenarioId: 'animal-knowledge-02',
+    hasAskedQuestion: true,
+  }),
+  {
+    ...emptyProgress,
+    stage: 'ask',
+    selectedCategory: 'animal',
+    selectedScenarioId: 'animal-knowledge-02',
+    hasAskedQuestion: true,
+  },
+  'sent answers should restore at the ask stage',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION - 1,
+    stage: 'ask',
+    selectedCategory: 'animal',
+    selectedScenarioId: 'animal-knowledge-02',
+    hasAskedQuestion: true,
+  }),
+  {
+    ...emptyProgress,
+    stage: 'ask',
+    selectedCategory: 'animal',
+    selectedScenarioId: 'animal-knowledge-02',
+    hasAskedQuestion: false,
+  },
+  'legacy progress should migrate without inventing an answer state',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION,
     stage: 'transformer',
     selectedCategory: 'animal',
     selectedScenarioId: 'animal-knowledge-02',
@@ -101,6 +136,7 @@ assert.deepEqual(
     selectedInputTokenTexts: ['강아지는왜', '꼬리를흔들까', '?'],
     selectedAttentionTokenId: 'animal-knowledge-02-token-02',
     studentCandidateId: 'animal-knowledge-02-cause',
+    hasAskedQuestion: true,
   }),
   {
     ...emptyProgress,
@@ -110,6 +146,7 @@ assert.deepEqual(
     selectedInputTokenTexts: ['강아지는왜', '꼬리를흔들까', '?'],
     selectedAttentionTokenId: 'animal-knowledge-02-token-02',
     studentCandidateId: 'animal-knowledge-02-cause',
+    hasAskedQuestion: true,
   },
   'custom tokenization should restore with the active lesson state',
 )
@@ -161,14 +198,16 @@ try {
 
 saveProgress({
   version: EXPERIENCE_PROGRESS_VERSION,
-  stage: 'questions',
-  selectedCategory: 'everyday',
-  selectedScenarioId: null,
+  stage: 'ask',
+  selectedCategory: 'animal',
+  selectedScenarioId: 'animal-knowledge-02',
   selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
+  hasAskedQuestion: true,
 })
 assert.notEqual(localStorage.getItem(PROGRESS_STORAGE_KEY), null, 'saveProgress should persist non-welcome progress')
+assert.equal(JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY)).hasAskedQuestion, true, 'saveProgress should persist the answer state')
 clearSavedProgress()
 assert.equal(localStorage.getItem(PROGRESS_STORAGE_KEY), null, 'clearSavedProgress should remove persisted progress')
 
@@ -180,6 +219,7 @@ saveProgress({
   selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
+  hasAskedQuestion: false,
 })
 assert.equal(localStorage.getItem(PROGRESS_STORAGE_KEY), null, 'oversized progress should not be persisted')
 
@@ -205,6 +245,7 @@ saveProgress({
   selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
+  hasAskedQuestion: false,
 })
 clearSavedProgress()
 globalThis.window = { localStorage }

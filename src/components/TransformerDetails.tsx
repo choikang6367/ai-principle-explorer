@@ -453,7 +453,7 @@ export function TransformerWalkthrough({
           <span aria-hidden="true">←</span>
           {currentStep === 0 ? '문장 나누기로' : '앞 단계'}
         </button>
-        <span className="transformer-walkthrough__progress" aria-live="polite">{currentStep + 1} / {STEP_TITLES.length}</span>
+        <span className="transformer-walkthrough__progress">{currentStep + 1} / {STEP_TITLES.length}</span>
         <button
           className="primary-button"
           type="button"

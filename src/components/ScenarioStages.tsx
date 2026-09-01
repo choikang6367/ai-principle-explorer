@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react'
 import { StageProgress } from './StageProgress'
 import { TokenSplitPractice } from './TokenSplitPractice'
 import { TransformerWalkthrough } from './TransformerDetails'
@@ -102,7 +102,7 @@ export function ScenarioHeading({
     <div className="scenario-stage__heading">
       <div>
         <p className="section-kicker">{category.label} / {kicker}</p>
-        <h1 id={id}>
+        <h1 id={id} tabIndex={-1}>
           {title}
           <span className="scenario-stage__accent">{accent}</span>
         </h1>
@@ -138,10 +138,17 @@ export function TokenizeStage({
   initialTokens?: readonly InputToken[]
   onNext: (tokens: readonly InputToken[]) => void
 }) {
-  const [tokensForNext, setTokensForNext] = useState<readonly InputToken[]>(initialTokens ?? scenario.tokens)
+  const initialTokenState = initialTokens ?? scenario.tokens
+  const [tokensForNext, setTokensForNext] = useState<readonly InputToken[]>(initialTokenState)
+  const tokensForNextRef = useRef<readonly InputToken[]>(initialTokenState)
   const tokenizationSummary = tokensForNext === scenario.tokens
     ? scenario.tokenizationHint
     : `내가 나눈 ${tokensForNext.length}개 조각을 다음 계산에 사용해요. 조각을 어떻게 나누었는지에 따라 AI가 참고할 수 있는 단위도 달라져요.`
+
+  const handleTokenizationChange = (tokens: readonly InputToken[]) => {
+    tokensForNextRef.current = tokens
+    setTokensForNext(tokens)
+  }
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="tokenize-title">
@@ -167,7 +174,7 @@ export function TokenizeStage({
           <TokenSplitPractice
             scenario={scenario}
             initialTokens={initialTokens}
-            onTokenizationChange={(tokens) => setTokensForNext(tokens)}
+            onTokenizationChange={handleTokenizationChange}
           />
           <div className="learning-card__connector" aria-hidden="true">↓</div>
           <div className="tokenization-output-label">이번 계산에 사용할 조각</div>
@@ -192,7 +199,7 @@ export function TokenizeStage({
         backLabel="질문 다시 고르기"
         nextLabel="다음 말 고르는 과정 보기"
         onBack={onBack}
-        onNext={() => onNext(tokensForNext)}
+        onNext={() => onNext(tokensForNextRef.current)}
       />
     </section>
   )
@@ -356,7 +363,7 @@ export function AttentionStage({
             )}
           </div>
         </article>
-        <aside className={`selection-panel attention-preview-panel ${selected ? 'has-selection' : ''}`} aria-live="polite">
+        <aside className={`selection-panel attention-preview-panel ${selected ? 'has-selection' : ''}`}>
           <span className="info-card__number">02</span>
           <p className="selection-panel__label">교육용 참고 세기</p>
           {selected ? (
@@ -502,7 +509,7 @@ export function PredictionStage({
             ))}
           </div>
         </article>
-        <aside className={`selection-panel prediction-preview-panel ${selectedCandidate ? 'has-selection' : ''}`} aria-live="polite">
+        <aside className={`selection-panel prediction-preview-panel ${selectedCandidate ? 'has-selection' : ''}`}>
           <p className="selection-panel__label">나의 다음 말</p>
           {selectedCandidate ? (
             <>
