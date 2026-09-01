@@ -28,10 +28,13 @@ export type StageId =
   | 'welcome'
   | 'categories'
   | 'questions'
+  | 'learning'
   | 'tokenize'
   | 'transformer'
   | 'attention'
   | 'prediction'
+  | 'generation'
+  | 'review'
   | 'compare'
   | 'complete'
 
@@ -45,6 +48,7 @@ export interface InputToken {
 
 export interface AttentionTarget {
   tokenId: string
+  sourceTokenId?: string
   weight: number
   label: string
   explanation: string
@@ -86,4 +90,37 @@ export interface Scenario {
   candidates: readonly PredictionCandidate[]
   aiCandidateId: string
   completionHint: string
+}
+
+export type GenerationSelection = 'highest-probability' | 'top-k'
+
+export interface GenerationOption {
+  id: string
+  text: string
+  probability: number
+}
+
+export interface GenerationStep {
+  index: number
+  contextLength: number
+  options: readonly GenerationOption[]
+  selectedToken: string
+  selectionLabel: string
+}
+
+export interface GeneratedAnswer {
+  tokens: readonly string[]
+  text: string
+  steps: readonly GenerationStep[]
+  selection: GenerationSelection
+  stopReason: 'answer-complete' | 'max-tokens'
+}
+
+export type AnswerCheckStatus = 'pass' | 'needs-review'
+
+export interface AnswerCheck {
+  id: string
+  label: string
+  status: AnswerCheckStatus
+  explanation: string
 }

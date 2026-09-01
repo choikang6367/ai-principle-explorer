@@ -2,8 +2,8 @@ import { useMemo, useState, type CSSProperties, type KeyboardEvent, type Mutable
 import { StageProgress } from './StageProgress'
 import { TokenSplitPractice } from './TokenSplitPractice'
 import { TransformerWalkthrough } from './TransformerDetails'
-import type { AttentionTarget, Category, InputToken, PredictionCandidate, Scenario } from '../types/experience'
-import { runTransformer } from '../transformer/engine'
+import type { AttentionTarget, Category, GeneratedAnswer, InputToken, PredictionCandidate, Scenario } from '../types/experience'
+import { runTransformer, type TransformerCalculation } from '../transformer/engine'
 
 interface ScenarioStageProps {
   category: Category
@@ -26,7 +26,7 @@ function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: ()
   }
 }
 
-function ScenarioTopline({ label, current }: { label: string; current: number }) {
+export function ScenarioTopline({ label, current }: { label: string; current: number }) {
   return (
     <div className="stage-topline">
       <p className="eyebrow">
@@ -38,7 +38,7 @@ function ScenarioTopline({ label, current }: { label: string; current: number })
   )
 }
 
-function ScenarioActions({
+export function ScenarioActions({
   backLabel,
   nextLabel,
   nextDisabled = false,
@@ -83,7 +83,7 @@ function ScenarioActions({
   )
 }
 
-function ScenarioHeading({
+export function ScenarioHeading({
   category,
   kicker,
   id,
@@ -128,10 +128,24 @@ function TokenRow({ tokens, selectedTokenId }: { tokens: readonly InputToken[]; 
   )
 }
 
-export function TokenizeStage({ category, scenario, onBack, onNext }: ScenarioStageProps & { onNext: () => void }) {
+export function TokenizeStage({
+  category,
+  scenario,
+  initialTokens,
+  onBack,
+  onNext,
+}: ScenarioStageProps & {
+  initialTokens?: readonly InputToken[]
+  onNext: (tokens: readonly InputToken[]) => void
+}) {
+  const [tokensForNext, setTokensForNext] = useState<readonly InputToken[]>(initialTokens ?? scenario.tokens)
+  const tokenizationSummary = tokensForNext === scenario.tokens
+    ? scenario.tokenizationHint
+    : `내가 나눈 ${tokensForNext.length}개 조각을 다음 계산에 사용해요. 조각을 어떻게 나누었는지에 따라 AI가 참고할 수 있는 단위도 달라져요.`
+
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="tokenize-title">
-      <ScenarioTopline label="세 번째 장면 / 입력 나누기" current={1} />
+      <ScenarioTopline label="네 번째 장면 / 입력 나누기" current={2} />
       <ScenarioHeading
         category={category}
         kicker="TOKENIZATION"
@@ -150,13 +164,18 @@ export function TokenizeStage({ category, scenario, onBack, onNext }: ScenarioSt
             <span className="question-strip__label">MY QUESTION</span>
             <p>{scenario.question}</p>
           </div>
-          <TokenSplitPractice scenario={scenario} />
+          <TokenSplitPractice
+            scenario={scenario}
+            initialTokens={initialTokens}
+            onTokenizationChange={(tokens) => setTokensForNext(tokens)}
+          />
           <div className="learning-card__connector" aria-hidden="true">↓</div>
-          <TokenRow tokens={scenario.tokens} />
+          <div className="tokenization-output-label">이번 계산에 사용할 조각</div>
+          <TokenRow tokens={tokensForNext} />
           <div className="learning-card__divider" />
           <div className="learning-card__explanation">
             <span className="learning-card__explanation-label">WHAT HAPPENED?</span>
-            <p>{scenario.tokenizationHint}</p>
+            <p>{tokenizationSummary}</p>
           </div>
         </article>
         <aside className="info-card">
@@ -173,22 +192,31 @@ export function TokenizeStage({ category, scenario, onBack, onNext }: ScenarioSt
         backLabel="질문 다시 고르기"
         nextLabel="다음 말 고르는 과정 보기"
         onBack={onBack}
-        onNext={onNext}
+        onNext={() => onNext(tokensForNext)}
       />
     </section>
   )
 }
 
-export function TransformerStage({ category, scenario, onBack, onNext }: ScenarioStageProps & { onNext: () => void }) {
+export function TransformerStage({
+  category,
+  scenario,
+  inputTokens,
+  onBack,
+  onNext,
+}: ScenarioStageProps & {
+  inputTokens: readonly InputToken[]
+  onNext: () => void
+}) {
   const [step, setStep] = useState(0)
   const transformerResult = useMemo(
-    () => runTransformer(scenario.tokens, scenario.candidates),
-    [scenario.tokens, scenario.candidates],
+    () => runTransformer(inputTokens, scenario.candidates),
+    [inputTokens, scenario.candidates],
   )
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="transformer-title">
-      <ScenarioTopline label="네 번째 장면 / 다음 말 고르기" current={2} />
+      <ScenarioTopline label="다섯 번째 장면 / 다음 말 고르기" current={3} />
       <ScenarioHeading
         category={category}
         kicker="다음 말 고르기"
@@ -209,11 +237,15 @@ export function TransformerStage({ category, scenario, onBack, onNext }: Scenari
   )
 }
 
-function getAttentionChoices(scenario: Scenario) {
-  return scenario.attentionTargets
+function getAttentionChoices(
+  scenario: Scenario,
+  tokens: readonly InputToken[] = scenario.tokens,
+  attentionTargets: readonly AttentionTarget[] = scenario.attentionTargets,
+) {
+  return attentionTargets
     .map((target) => ({
       target,
-      token: scenario.tokens.find((token) => token.id === target.tokenId),
+      token: tokens.find((token) => token.id === target.tokenId),
     }))
     .filter((choice): choice is { target: AttentionTarget; token: InputToken } => Boolean(choice.token))
 }
@@ -221,19 +253,23 @@ function getAttentionChoices(scenario: Scenario) {
 export function AttentionStage({
   category,
   scenario,
+  tokens,
+  attentionTargets,
   selectedTokenId,
   attentionRefs,
   onSelectToken,
   onBack,
   onNext,
 }: ScenarioStageProps & {
+  tokens: readonly InputToken[]
+  attentionTargets: readonly AttentionTarget[]
   selectedTokenId: string | null
   attentionRefs: MutableRefObject<Array<HTMLButtonElement | null>>
   onSelectToken: (tokenId: string) => void
   onNext: () => void
-}) {
-  const attentionChoices = getAttentionChoices(scenario)
-  const selected = attentionChoices.find((choice) => choice.token.id === selectedTokenId)
+  }) {
+  const attentionChoices = getAttentionChoices(scenario, tokens, attentionTargets)
+  const selected = attentionChoices.find((choice) => (choice.target.sourceTokenId ?? choice.target.tokenId) === selectedTokenId)
 
   const moveFocus = (index: number, direction: 1 | -1) => {
     const nextIndex = (index + direction + attentionChoices.length) % attentionChoices.length
@@ -260,7 +296,7 @@ export function AttentionStage({
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="attention-title">
-      <ScenarioTopline label="다섯 번째 장면 / 참고하기" current={3} />
+      <ScenarioTopline label="여섯 번째 장면 / 참고하기" current={4} />
       <ScenarioHeading
         category={category}
         kicker="ATTENTION"
@@ -276,20 +312,20 @@ export function AttentionStage({
             <span>02 / 03</span>
           </div>
           <p className="board-prompt">{scenario.attentionHint}</p>
-          <TokenRow tokens={scenario.tokens} selectedTokenId={selectedTokenId} />
+          <TokenRow tokens={tokens} selectedTokenId={selected?.token.id} />
           <div className="attention-choice-list" aria-label="참고할 단서 선택">
             {attentionChoices.map(({ token, target }, index) => (
               <button
-                key={target.tokenId}
+                key={target.sourceTokenId ?? target.tokenId}
                 ref={(element) => {
                   attentionRefs.current[index] = element
                 }}
-                className={`attention-choice ${token.id === selectedTokenId ? 'is-selected' : ''}`}
+                className={`attention-choice ${(target.sourceTokenId ?? target.tokenId) === selectedTokenId ? 'is-selected' : ''}`}
                 type="button"
-                aria-pressed={token.id === selectedTokenId}
+                aria-pressed={(target.sourceTokenId ?? target.tokenId) === selectedTokenId}
                 aria-label={`${token.text}, ${target.label}, 참고 세기 ${Math.round(target.weight * 100)}%`}
-                onClick={() => onSelectToken(token.id)}
-                onKeyDown={(event) => handleChoiceKeyDown(event, index, token.id)}
+                onClick={() => onSelectToken(target.sourceTokenId ?? target.tokenId)}
+                onKeyDown={(event) => handleChoiceKeyDown(event, index, target.sourceTokenId ?? target.tokenId)}
               >
                 <span className="attention-choice__token">{token.text}</span>
                 <span className="attention-choice__body">
@@ -300,7 +336,7 @@ export function AttentionStage({
                   <span style={{ '--attention-width': `${Math.round(target.weight * 100)}%` } as CSSProperties} />
                 </span>
                 <span className="attention-choice__status" aria-hidden="true">
-                  {token.id === selectedTokenId ? 'SELECTED' : 'CHOOSE'}
+                  {(target.sourceTokenId ?? target.tokenId) === selectedTokenId ? 'SELECTED' : 'CHOOSE'}
                 </span>
               </button>
             ))}
@@ -357,6 +393,10 @@ export function AttentionStage({
 export function PredictionStage({
   category,
   scenario,
+  tokens,
+  attentionTargets,
+  candidates,
+  predictionResult,
   selectedTokenId,
   selectedCandidateId,
   candidateRefs,
@@ -364,18 +404,24 @@ export function PredictionStage({
   onBack,
   onNext,
 }: ScenarioStageProps & {
+  tokens: readonly InputToken[]
+  attentionTargets: readonly AttentionTarget[]
+  candidates: readonly PredictionCandidate[]
+  predictionResult: TransformerCalculation
   selectedTokenId: string | null
   selectedCandidateId: string | null
   candidateRefs: MutableRefObject<Array<HTMLButtonElement | null>>
   onSelectCandidate: (candidateId: string) => void
   onNext: () => void
 }) {
-  const selectedAttention = scenario.attentionTargets.find((target) => target.tokenId === selectedTokenId)
-  const selectedToken = scenario.tokens.find((token) => token.id === selectedTokenId)
-  const selectedCandidate = scenario.candidates.find((candidate) => candidate.id === selectedCandidateId)
+  const selectedAttention = attentionTargets.find((target) => (target.sourceTokenId ?? target.tokenId) === selectedTokenId)
+  const selectedToken = selectedAttention
+    ? tokens.find((token) => token.id === selectedAttention.tokenId)
+    : undefined
+  const selectedCandidate = candidates.find((candidate) => candidate.id === selectedCandidateId)
 
   const moveFocus = (index: number, direction: 1 | -1) => {
-    const nextIndex = (index + direction + scenario.candidates.length) % scenario.candidates.length
+    const nextIndex = (index + direction + candidates.length) % candidates.length
     candidateRefs.current[nextIndex]?.focus()
   }
 
@@ -399,7 +445,7 @@ export function PredictionStage({
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="prediction-title">
-      <ScenarioTopline label="여섯 번째 장면 / 다음 말 예측" current={4} />
+      <ScenarioTopline label="일곱 번째 장면 / 다음 말 예측" current={5} />
       <ScenarioHeading
         category={category}
         kicker="NEXT WORD"
@@ -418,9 +464,13 @@ export function PredictionStage({
             <span className="prediction-context__label">참고한 앞부분</span>
             <strong>{selectedToken?.text ?? '단서'} <span>·</span> {selectedAttention?.label ?? '선택한 단서'}</strong>
           </div>
+          <div className="prediction-context__calculation" role="status" aria-live="polite">
+            <span>선택한 단서를 다시 계산했어요.</span>
+            <strong>AI 모형의 선택: {predictionResult.selectedNextToken}</strong>
+          </div>
           <p className="board-prompt">{scenario.predictionHint}</p>
           <div className="candidate-list" aria-label="다음 말 후보 선택">
-            {scenario.candidates.map((candidate, index) => (
+            {candidates.map((candidate, index) => (
               <button
                 key={candidate.id}
                 ref={(element) => {
@@ -429,7 +479,7 @@ export function PredictionStage({
                 className={`candidate-card ${candidate.id === selectedCandidateId ? 'is-selected' : ''}`}
                 type="button"
                 aria-pressed={candidate.id === selectedCandidateId}
-                aria-label={`${candidate.text}, 교육용 확률 ${candidate.probability}%`}
+                aria-label={`${candidate.text}, 선택한 단서를 반영한 교육용 확률 ${candidate.probability}%`}
                 onClick={() => onSelectCandidate(candidate.id)}
                 onKeyDown={(event) => handleCandidateKeyDown(event, index, candidate.id)}
               >
@@ -441,7 +491,7 @@ export function PredictionStage({
                 </span>
                 <span className="candidate-card__text">{candidate.text}</span>
                 <span className="candidate-card__probability">
-                  <span className="candidate-card__probability-label">교육용 확률</span>
+                  <span className="candidate-card__probability-label">문맥 반영 확률</span>
                   <strong>{candidate.probability}%</strong>
                   <span className="candidate-card__bar" aria-hidden="true">
                     <span style={{ '--candidate-width': `${candidate.probability}%` } as CSSProperties} />
@@ -457,7 +507,7 @@ export function PredictionStage({
           {selectedCandidate ? (
             <>
               <h2>{selectedCandidate.text}</h2>
-              <div className="prediction-preview-panel__probability">교육용 확률 <strong>{selectedCandidate.probability}%</strong></div>
+              <div className="prediction-preview-panel__probability">문맥 반영 확률 <strong>{selectedCandidate.probability}%</strong></div>
               <p className="selection-panel__description">{selectedCandidate.explanation}</p>
             </>
           ) : (
@@ -484,18 +534,22 @@ export function CompareStage({
   category,
   studentCandidate,
   aiCandidate,
+  studentAnswer,
+  aiAnswer,
   onBack,
   onNext,
 }: Pick<ScenarioStageProps, 'category' | 'onBack'> & {
   studentCandidate: PredictionCandidate
   aiCandidate: PredictionCandidate
+  studentAnswer?: GeneratedAnswer | null
+  aiAnswer?: GeneratedAnswer | null
   onNext: () => void
 }) {
   const isMatch = studentCandidate.id === aiCandidate.id
 
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="compare-title">
-      <ScenarioTopline label="일곱 번째 장면 / 선택 비교" current={5} />
+      <ScenarioTopline label="아홉 번째 장면 / 선택 비교" current={8} />
       <ScenarioHeading
         category={category}
         kicker="COMPARE"
@@ -522,7 +576,8 @@ export function CompareStage({
           <p className="compare-card__explanation">{studentCandidate.outcome.explanation}</p>
           <div className="answer-preview">
             <span>답변 미리보기</span>
-            <p>{studentCandidate.outcome.answer}</p>
+            <p>{studentAnswer?.text ?? studentCandidate.outcome.answer}</p>
+            {studentAnswer ? <small>{studentAnswer.steps.length}개의 조각을 차례로 붙여 만들었어요.</small> : null}
           </div>
         </article>
         <div className="comparison-bridge" aria-hidden="true">
@@ -541,12 +596,13 @@ export function CompareStage({
           <p className="compare-card__explanation">{aiCandidate.outcome.explanation}</p>
           <div className="answer-preview">
             <span>답변 미리보기</span>
-            <p>{aiCandidate.outcome.answer}</p>
+            <p>{aiAnswer?.text ?? aiCandidate.outcome.answer}</p>
+            {aiAnswer ? <small>AI 모형도 같은 방식으로 한 조각씩 만들어요.</small> : null}
           </div>
         </article>
       </div>
       <ScenarioActions
-        backLabel="다음 말 다시 고르기"
+        backLabel="답변 검사로 돌아가기"
         nextLabel="답변 완성 보기"
         onBack={onBack}
         onNext={onNext}
@@ -560,18 +616,20 @@ export function CompleteStage({
   scenario,
   studentCandidate,
   aiCandidate,
+  generatedAnswer,
   onBack,
   onOtherQuestion,
   onRestart,
 }: ScenarioStageProps & {
   studentCandidate: PredictionCandidate
   aiCandidate: PredictionCandidate
+  generatedAnswer?: GeneratedAnswer | null
   onOtherQuestion: () => void
   onRestart: () => void
 }) {
   return (
     <section className="scenario-stage stage-enter" aria-labelledby="complete-title">
-      <ScenarioTopline label="마지막 장면 / 답변 완성" current={6} />
+      <ScenarioTopline label="마지막 장면 / 답변 완성" current={9} />
       <ScenarioHeading
         category={category}
         kicker="COMPLETE"
@@ -594,7 +652,8 @@ export function CompleteStage({
           <div className="final-answer-card__divider" />
           <p className="final-answer-card__label">완성된 답변</p>
           <h2>{studentCandidate.outcome.title}</h2>
-          <p className="final-answer-card__answer">{studentCandidate.outcome.answer}</p>
+          <p className="final-answer-card__answer">{generatedAnswer?.text ?? studentCandidate.outcome.answer}</p>
+          {generatedAnswer ? <small className="final-answer-card__generation-note">{generatedAnswer.steps.length}번의 ‘다음 조각 고르기’를 거쳐 완성했어요.</small> : null}
         </article>
         <aside className="completion-reflection">
           <span className="info-card__number">03</span>

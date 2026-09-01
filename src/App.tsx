@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MutableRefObject, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableRefObject, type RefObject } from 'react'
+import { GenerationStage, LearningStage, ReviewStage } from './components/AIProcessStages'
 import { CategoryGlyph } from './components/CategoryGlyph'
 import { ExplorerOrb } from './components/ExplorerOrb'
 import {
@@ -19,9 +20,11 @@ import {
   type ExperienceProgress,
 } from './data/progress'
 import { questionTypeMeta } from './data/questionBank'
-import { getScenarioById, getScenariosForCategory } from './data/scenarios'
+import { adaptAttentionTargets, getScenarioById, getScenariosForCategory } from './data/scenarios'
+import { createContextualCandidates, runTransformer } from './transformer/engine'
+import { generateAnswer, reviewGeneratedAnswer } from './transformer/generation'
 import { useViewportProfile } from './hooks/useViewportProfile'
-import type { Category, CategoryId, QuestionType, Scenario, StageId } from './types/experience'
+import type { Category, CategoryId, InputToken, QuestionType, Scenario, StageId } from './types/experience'
 
 function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: () => void) {
   if (event.key === 'Enter' || event.key === ' ') {
@@ -33,11 +36,14 @@ function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: ()
 const previousStageByStage: Partial<Record<StageId, StageId>> = {
   categories: 'welcome',
   questions: 'categories',
-  tokenize: 'questions',
+  learning: 'questions',
+  tokenize: 'learning',
   transformer: 'tokenize',
   attention: 'transformer',
   prediction: 'attention',
-  compare: 'prediction',
+  generation: 'prediction',
+  review: 'generation',
+  compare: 'review',
   complete: 'compare',
 }
 
@@ -45,10 +51,13 @@ const globalEnterSelectorByStage: Partial<Record<StageId, string>> = {
   welcome: '.welcome-stage .primary-button',
   categories: '.selection-panel__action:not(:disabled)',
   questions: '.selection-panel__action:not(:disabled)',
+  learning: '.scenario-stage-actions .primary-button:not(:disabled)',
   tokenize: '.scenario-stage-actions .primary-button:not(:disabled)',
   transformer: '.transformer-walkthrough__actions .primary-button:not(:disabled)',
   attention: '.scenario-stage-actions .primary-button:not(:disabled)',
   prediction: '.scenario-stage-actions .primary-button:not(:disabled)',
+  generation: '.scenario-stage-actions .primary-button:not(:disabled)',
+  review: '.scenario-stage-actions .primary-button:not(:disabled)',
   compare: '.scenario-stage-actions .primary-button:not(:disabled)',
 }
 
@@ -56,6 +65,23 @@ function findVisibleButton(selector: string) {
   return Array.from(document.querySelectorAll<HTMLButtonElement>(selector)).find(
     (button) => button.getClientRects().length > 0 && !button.disabled,
   )
+}
+
+function createActiveInputTokens(scenarioId: string, tokenTexts: readonly string[]) {
+  return tokenTexts.map((text, index) => ({
+    id: `${scenarioId}-practice-token-${String(index + 1).padStart(2, '0')}`,
+    text,
+    kind: /^[?？.!！。]+$/u.test(text) ? 'punctuation' as const : 'word' as const,
+  }))
+}
+
+function getCustomTokenTexts(scenario: Scenario, tokens: readonly InputToken[]) {
+  const defaultTexts = scenario.tokens.map((token) => token.text)
+  const tokenTexts = tokens.map((token) => token.text)
+  const matchesDefault = tokenTexts.length === defaultTexts.length &&
+    tokenTexts.every((text, index) => text === defaultTexts[index])
+
+  return matchesDefault ? null : tokenTexts
 }
 
 function MobileSelectionDock({
@@ -577,6 +603,7 @@ function App() {
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(initialProgress.selectedScenarioId)
   const [selectedAttentionTokenId, setSelectedAttentionTokenId] = useState<string | null>(initialProgress.selectedAttentionTokenId)
   const [studentCandidateId, setStudentCandidateId] = useState<string | null>(initialProgress.studentCandidateId)
+  const [customInputTokenTexts, setCustomInputTokenTexts] = useState<readonly string[] | null>(initialProgress.selectedInputTokenTexts)
   const startButtonRef = useRef<HTMLButtonElement | null>(null)
   const categoryRefs = useRef<Array<HTMLButtonElement | null>>([])
   const scenarioRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -598,10 +625,11 @@ function App() {
       stage,
       selectedCategory,
       selectedScenarioId,
+      selectedInputTokenTexts: customInputTokenTexts,
       selectedAttentionTokenId,
       studentCandidateId,
     })
-  }, [stage, selectedCategory, selectedScenarioId, selectedAttentionTokenId, studentCandidateId])
+  }, [stage, selectedCategory, selectedScenarioId, customInputTokenTexts, selectedAttentionTokenId, studentCandidateId])
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: WindowEventMap['keydown']) => {
@@ -647,6 +675,7 @@ function App() {
     setSelectedScenarioId(null)
     setSelectedAttentionTokenId(null)
     setStudentCandidateId(null)
+    setCustomInputTokenTexts(null)
     attentionRefs.current = []
     candidateRefs.current = []
   }
@@ -655,14 +684,63 @@ function App() {
     setSelectedScenarioId(scenarioId)
     setSelectedAttentionTokenId(null)
     setStudentCandidateId(null)
+    setCustomInputTokenTexts(null)
     attentionRefs.current = []
+    candidateRefs.current = []
+  }
+
+  const handleAttentionSelect = (tokenId: string) => {
+    setSelectedAttentionTokenId(tokenId)
+    setStudentCandidateId(null)
     candidateRefs.current = []
   }
 
   const selectedCategoryData = categories.find((category) => category.id === selectedCategory)
   const selectedScenario = selectedScenarioId ? getScenarioById(selectedScenarioId) : undefined
-  const studentCandidate = selectedScenario?.candidates.find((candidate) => candidate.id === studentCandidateId)
-  const aiCandidate = selectedScenario?.candidates.find((candidate) => candidate.id === selectedScenario.aiCandidateId)
+  const customInputTokens = selectedScenario && customInputTokenTexts
+    ? createActiveInputTokens(selectedScenario.id, customInputTokenTexts)
+    : null
+  const activeInputTokens = selectedScenario ? customInputTokens ?? selectedScenario.tokens : []
+  const activeAttentionTargets = selectedScenario
+    ? adaptAttentionTargets(selectedScenario, activeInputTokens)
+    : []
+  const activeFocusTokenId = activeAttentionTargets.find(
+    (target) => (target.sourceTokenId ?? target.tokenId) === selectedAttentionTokenId,
+  )?.tokenId ?? null
+  const contextualPrediction = useMemo(() => {
+    if (!selectedScenario || !activeFocusTokenId) {
+      return null
+    }
+
+    const result = runTransformer(activeInputTokens, selectedScenario.candidates, activeFocusTokenId)
+    return {
+      result,
+      candidates: createContextualCandidates(selectedScenario.candidates, result),
+    }
+  }, [activeFocusTokenId, activeInputTokens, selectedScenario])
+  const predictionCandidates = contextualPrediction?.candidates ?? selectedScenario?.candidates ?? []
+  const studentCandidate = predictionCandidates.find((candidate) => candidate.id === studentCandidateId)
+  const aiCandidate = predictionCandidates.find(
+    (candidate) => candidate.id === contextualPrediction?.result.selectedCandidateId,
+  ) ?? selectedScenario?.candidates.find((candidate) => candidate.id === selectedScenario.aiCandidateId)
+  const generatedStudentAnswer = useMemo(
+    () => selectedScenario && studentCandidate
+      ? generateAnswer(studentCandidate, activeInputTokens, activeFocusTokenId)
+      : null,
+    [activeFocusTokenId, activeInputTokens, selectedScenario, studentCandidate],
+  )
+  const generatedAiAnswer = useMemo(
+    () => selectedScenario && aiCandidate
+      ? generateAnswer(aiCandidate, activeInputTokens, activeFocusTokenId)
+      : null,
+    [activeFocusTokenId, activeInputTokens, aiCandidate, selectedScenario],
+  )
+  const answerChecks = useMemo(
+    () => selectedScenario && generatedStudentAnswer
+      ? reviewGeneratedAnswer(selectedScenario, generatedStudentAnswer)
+      : [],
+    [generatedStudentAnswer, selectedScenario],
+  )
 
   return (
     <div
@@ -720,23 +798,37 @@ function App() {
               onSelect={handleScenarioSelect}
               onContinue={() => {
                 if (selectedScenario) {
-                  setStage('tokenize')
+                  setStage('learning')
                 }
               }}
               onBack={() => setStage('categories')}
               scenarioRefs={scenarioRefs}
             />
+          ) : stage === 'learning' && selectedScenario ? (
+            <LearningStage
+              category={selectedCategoryData}
+              scenario={selectedScenario}
+              onBack={() => setStage('questions')}
+              onNext={() => setStage('tokenize')}
+            />
           ) : stage === 'tokenize' && selectedScenario ? (
             <TokenizeStage
               category={selectedCategoryData}
               scenario={selectedScenario}
-              onBack={() => setStage('questions')}
-              onNext={() => setStage('transformer')}
+              initialTokens={customInputTokens ?? undefined}
+              onBack={() => setStage('learning')}
+              onNext={(tokens) => {
+                setCustomInputTokenTexts(getCustomTokenTexts(selectedScenario, tokens))
+                setSelectedAttentionTokenId(null)
+                setStudentCandidateId(null)
+                setStage('transformer')
+              }}
             />
           ) : stage === 'transformer' && selectedScenario ? (
             <TransformerStage
               category={selectedCategoryData}
               scenario={selectedScenario}
+              inputTokens={activeInputTokens}
               onBack={() => setStage('tokenize')}
               onNext={() => setStage('attention')}
             />
@@ -744,9 +836,11 @@ function App() {
             <AttentionStage
               category={selectedCategoryData}
               scenario={selectedScenario}
+              tokens={activeInputTokens}
+              attentionTargets={activeAttentionTargets}
               selectedTokenId={selectedAttentionTokenId}
               attentionRefs={attentionRefs}
-              onSelectToken={setSelectedAttentionTokenId}
+              onSelectToken={handleAttentionSelect}
               onBack={() => setStage('transformer')}
               onNext={() => {
                 if (selectedAttentionTokenId) {
@@ -758,6 +852,10 @@ function App() {
             <PredictionStage
               category={selectedCategoryData}
               scenario={selectedScenario}
+              tokens={activeInputTokens}
+              attentionTargets={activeAttentionTargets}
+              candidates={predictionCandidates}
+              predictionResult={contextualPrediction?.result ?? runTransformer(activeInputTokens, selectedScenario.candidates, activeFocusTokenId)}
               selectedTokenId={selectedAttentionTokenId}
               selectedCandidateId={studentCandidateId}
               candidateRefs={candidateRefs}
@@ -765,16 +863,37 @@ function App() {
               onBack={() => setStage('attention')}
               onNext={() => {
                 if (studentCandidateId) {
-                  setStage('compare')
+                  setStage('generation')
                 }
               }}
+            />
+          ) : stage === 'generation' && selectedScenario && studentCandidate && generatedStudentAnswer ? (
+            <GenerationStage
+              category={selectedCategoryData}
+              scenario={selectedScenario}
+              candidate={studentCandidate}
+              answer={generatedStudentAnswer}
+              onBack={() => setStage('prediction')}
+              onNext={() => setStage('review')}
+            />
+          ) : stage === 'review' && selectedScenario && studentCandidate && generatedStudentAnswer ? (
+            <ReviewStage
+              category={selectedCategoryData}
+              scenario={selectedScenario}
+              candidate={studentCandidate}
+              answer={generatedStudentAnswer}
+              checks={answerChecks}
+              onBack={() => setStage('generation')}
+              onNext={() => setStage('compare')}
             />
           ) : stage === 'compare' && selectedScenario && studentCandidate && aiCandidate ? (
             <CompareStage
               category={selectedCategoryData}
               studentCandidate={studentCandidate}
               aiCandidate={aiCandidate}
-              onBack={() => setStage('prediction')}
+              studentAnswer={generatedStudentAnswer}
+              aiAnswer={generatedAiAnswer}
+              onBack={() => setStage('review')}
               onNext={() => setStage('complete')}
             />
           ) : stage === 'complete' && selectedScenario && studentCandidate && aiCandidate ? (
@@ -783,11 +902,13 @@ function App() {
               scenario={selectedScenario}
               studentCandidate={studentCandidate}
               aiCandidate={aiCandidate}
+              generatedAnswer={generatedStudentAnswer}
               onBack={() => setStage('compare')}
               onOtherQuestion={() => {
                 setSelectedScenarioId(null)
                 setSelectedAttentionTokenId(null)
                 setStudentCandidateId(null)
+                setCustomInputTokenTexts(null)
                 setStage('questions')
               }}
               onRestart={() => {
@@ -796,6 +917,7 @@ function App() {
                 setSelectedScenarioId(null)
                 setSelectedAttentionTokenId(null)
                 setStudentCandidateId(null)
+                setCustomInputTokenTexts(null)
                 setStage('welcome')
               }}
             />

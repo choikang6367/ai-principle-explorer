@@ -24,6 +24,7 @@ export interface TransformerHeadResult {
 export interface TransformerCalculation {
   tokens: readonly string[]
   tokenIds: readonly string[]
+  focusedTokenId: string | null
   vocabulary: readonly string[]
   tokenEmbeddings: TransformerMatrix
   positionEmbeddings: TransformerMatrix
@@ -35,9 +36,11 @@ export interface TransformerCalculation {
   concatenatedHeadResults: TransformerMatrix
   attentionOutput: TransformerMatrix
   residualAfterAttention: TransformerMatrix
+  normalizedAfterAttention: TransformerMatrix
   feedForwardHidden: TransformerMatrix
   feedForwardOutput: TransformerMatrix
   residualOutput: TransformerMatrix
+  normalizedOutput: TransformerMatrix
   logits: readonly number[]
   nextTokenProbabilities: readonly TransformerProbability[]
   selectedNextToken: string
@@ -50,6 +53,8 @@ const MODEL_DIMENSION = 4
 const HEAD_DIMENSION = 2
 const HEAD_COUNT = 2
 const MASKED_SCORE = -1_000_000
+const FOCUSED_TOKEN_BOOST = 0.65
+const LAYER_NORM_EPSILON = 0.00001
 
 const FIXED_TOKEN_EMBEDDINGS: Readonly<Record<string, TransformerVector>> = {
   강아지는: [0.78, 0.12, 0.22, 0.08],
@@ -200,6 +205,23 @@ function relu(vector: readonly number[]) {
   return vector.map((value) => Math.max(0, finite(value)))
 }
 
+function layerNormalize(matrix: readonly (readonly number[])[]) {
+  return matrix.map((row) => {
+    if (row.length === 0) {
+      return []
+    }
+
+    const mean = row.reduce((sum, value) => sum + finite(value), 0) / row.length
+    const variance = row.reduce((sum, value) => {
+      const difference = finite(value) - mean
+      return sum + difference * difference
+    }, 0) / row.length
+    const scale = Math.sqrt(variance + LAYER_NORM_EPSILON)
+
+    return row.map((value) => finite((finite(value) - mean) / scale))
+  })
+}
+
 function createFallbackEmbedding(text: string) {
   const codeSum = Array.from(text).reduce(
     (total, character, index) => total + (character.codePointAt(0) ?? 0) * (index + 1),
@@ -282,9 +304,17 @@ function buildHeadResult(
   keys: TransformerMatrix,
   values: TransformerMatrix,
   causalMask: readonly boolean[][],
+  focusedTokenIndex = -1,
 ): TransformerHeadResult {
   const scale = Math.sqrt(HEAD_DIMENSION)
-  const scores = queries.map((query) => keys.map((key) => finite(dot(query, key) / scale)))
+  const rawScores = queries.map((query) => keys.map((key) => finite(dot(query, key) / scale)))
+  const scores = rawScores.map((row, rowIndex) =>
+    row.map((score, columnIndex) => {
+      const isLastToken = rowIndex === rawScores.length - 1
+      const isFocusedToken = columnIndex === focusedTokenIndex
+      return isLastToken && isFocusedToken ? finite(score + FOCUSED_TOKEN_BOOST) : score
+    }),
+  )
   const maskedScores = scores.map((row, rowIndex) =>
     row.map((score, columnIndex) => (causalMask[rowIndex]?.[columnIndex] ? score : MASKED_SCORE)),
   )
@@ -317,6 +347,7 @@ function getReadoutColumn(index: number) {
 export function runTransformer(
   inputTokens: readonly InputToken[],
   candidates: readonly PredictionCandidate[],
+  focusTokenId: string | null = null,
 ): TransformerCalculation {
   const tokens = inputTokens.length > 0
     ? inputTokens
@@ -324,6 +355,8 @@ export function runTransformer(
   const vocabularyEntries = buildVocabulary(candidates)
   const tokenTexts = tokens.map((token) => token.text)
   const tokenIds = tokens.map((token) => token.id)
+  const focusedTokenIndex = focusTokenId ? tokenIds.indexOf(focusTokenId) : -1
+  const focusedToken = focusedTokenIndex >= 0 ? tokens[focusedTokenIndex] : undefined
   const tokenEmbeddings = tokens.map((token) => getTokenEmbedding(token.text))
   const positionEmbeddings = tokens.map((_, index) => getPositionEmbedding(index))
   const positionAddedEmbeddings = tokenEmbeddings.map((embedding, index) =>
@@ -334,7 +367,7 @@ export function runTransformer(
     const queries = matrixMultiply(positionAddedEmbeddings, QUERY_WEIGHTS[index] ?? QUERY_WEIGHTS[0])
     const keys = matrixMultiply(positionAddedEmbeddings, KEY_WEIGHTS[index] ?? KEY_WEIGHTS[0])
     const values = matrixMultiply(positionAddedEmbeddings, VALUE_WEIGHTS[index] ?? VALUE_WEIGHTS[0])
-    return buildHeadResult(index, queries, keys, values, causalMask)
+    return buildHeadResult(index, queries, keys, values, causalMask, focusedTokenIndex)
   })
   const queriesByHead = heads.map((head) => head.queries)
   const keysByHead = heads.map((head) => head.keys)
@@ -346,8 +379,9 @@ export function runTransformer(
   const residualAfterAttention = positionAddedEmbeddings.map((embedding, index) =>
     addVectors(embedding, attentionOutput[index] ?? []),
   )
+  const normalizedAfterAttention = layerNormalize(residualAfterAttention)
   const feedForwardHidden = addBias(
-    matrixMultiply(residualAfterAttention, FEED_FORWARD_WEIGHTS),
+    matrixMultiply(normalizedAfterAttention, FEED_FORWARD_WEIGHTS),
     FEED_FORWARD_BIAS,
   ).map((row) => relu(row))
   const feedForwardOutput = addBias(
@@ -357,7 +391,8 @@ export function runTransformer(
   const residualOutput = residualAfterAttention.map((row, index) =>
     addVectors(row, feedForwardOutput[index] ?? []),
   )
-  const finalState = residualOutput[residualOutput.length - 1] ?? Array(MODEL_DIMENSION).fill(0)
+  const normalizedOutput = layerNormalize(residualOutput)
+  const finalState = normalizedOutput[normalizedOutput.length - 1] ?? Array(MODEL_DIMENSION).fill(0)
   const logits = vocabularyEntries.map((_, index) =>
     finite(dot(finalState, getReadoutColumn(index)) + (OUTPUT_BIAS[index % OUTPUT_BIAS.length] ?? 0)),
   )
@@ -377,6 +412,7 @@ export function runTransformer(
   return {
     tokens: tokenTexts,
     tokenIds,
+    focusedTokenId: focusedToken?.id ?? null,
     vocabulary: vocabularyEntries.map((entry) => entry.token),
     tokenEmbeddings: finiteMatrix(tokenEmbeddings),
     positionEmbeddings: finiteMatrix(positionEmbeddings),
@@ -388,12 +424,58 @@ export function runTransformer(
     concatenatedHeadResults: finiteMatrix(concatenatedHeadResults),
     attentionOutput: finiteMatrix(attentionOutput),
     residualAfterAttention: finiteMatrix(residualAfterAttention),
+    normalizedAfterAttention: finiteMatrix(normalizedAfterAttention),
     feedForwardHidden: finiteMatrix(feedForwardHidden),
     feedForwardOutput: finiteMatrix(feedForwardOutput),
     residualOutput: finiteMatrix(residualOutput),
+    normalizedOutput: finiteMatrix(normalizedOutput),
     logits: finiteVector(logits),
     nextTokenProbabilities,
     selectedNextToken: selectedEntry?.token ?? '다음',
     selectedCandidateId: selectedEntry?.candidateIds[0] ?? null,
   }
+}
+
+export function createContextualCandidates(
+  candidates: readonly PredictionCandidate[],
+  result: TransformerCalculation,
+): readonly PredictionCandidate[] {
+  if (candidates.length === 0) {
+    return []
+  }
+
+  const probabilityByCandidateId = new Map<string, number>()
+
+  for (const probability of result.nextTokenProbabilities) {
+    const share = probability.candidateIds.length > 0
+      ? probability.probability / probability.candidateIds.length
+      : 0
+
+    for (const candidateId of probability.candidateIds) {
+      probabilityByCandidateId.set(candidateId, share)
+    }
+  }
+
+  const rawProbabilities = candidates.map((candidate) => probabilityByCandidateId.get(candidate.id) ?? 0)
+  const rawTotal = rawProbabilities.reduce((total, probability) => total + probability, 0)
+  const fallbackTotal = candidates.reduce((total, candidate) => total + Math.max(0, candidate.probability), 0)
+  const normalizedProbabilities = candidates.map((candidate, index) => rawTotal > Number.EPSILON
+    ? (rawProbabilities[index] ?? 0) / rawTotal
+    : fallbackTotal > Number.EPSILON
+      ? Math.max(0, candidate.probability) / fallbackTotal
+      : 1 / candidates.length)
+  let roundedTotal = 0
+
+  return candidates.map((candidate, index) => {
+    const probability = index === candidates.length - 1
+      ? Math.max(0, Number((100 - roundedTotal).toFixed(1)))
+      : Number(((normalizedProbabilities[index] ?? 0) * 100).toFixed(1))
+
+    roundedTotal += probability
+
+    return {
+      ...candidate,
+      probability,
+    }
+  })
 }

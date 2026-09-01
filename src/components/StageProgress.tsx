@@ -1,4 +1,15 @@
-const learningStages = ['질문', '나누기', 'Transformer', '참고하기', '예측하기', '비교하기', '완성']
+const learningStages = [
+  '질문 고르기',
+  '미리 배우기',
+  '나누기',
+  'Transformer',
+  '참고하기',
+  '예측하기',
+  '생성하기',
+  '검사하기',
+  '비교하기',
+  '완성',
+]
 
 interface StageProgressProps {
   current: number

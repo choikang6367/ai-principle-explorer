@@ -1,5 +1,5 @@
 import { categories } from '../src/data/categories.ts'
-import { scenarios } from '../src/data/scenarios.ts'
+import { adaptAttentionTargets, scenarios } from '../src/data/scenarios.ts'
 
 const errors = []
 const categoryIds = new Set(categories.map((category) => category.id))
@@ -106,6 +106,19 @@ for (const scenario of scenarios) {
     }
     requireText(target.label, `${scenarioLabel}.attentionTargets ${target.tokenId}.label`)
     requireText(target.explanation, `${scenarioLabel}.attentionTargets ${target.tokenId}.explanation`)
+  }
+
+  const adaptedTargets = adaptAttentionTargets(scenario, scenario.tokens)
+  if (adaptedTargets.map((target) => target.tokenId).join('|') !== scenario.attentionTargets.map((target) => target.tokenId).join('|')) {
+    report(`${scenarioLabel} should preserve attention target references for the default tokenization`)
+  }
+
+  const regroupedTokens = scenario.tokens.length > 1
+    ? [{ ...scenario.tokens[0], id: `${scenario.id}-regrouped`, text: scenario.tokens.slice(0, 2).map((token) => token.text).join(' ') }]
+    : scenario.tokens
+  const regroupedTargets = adaptAttentionTargets(scenario, regroupedTokens)
+  if (regroupedTokens.length > 0 && regroupedTargets.some((target) => !regroupedTokens.some((token) => token.id === target.tokenId))) {
+    report(`${scenarioLabel} adapted attention targets should reference the active tokenization`)
   }
 
   const candidateIds = new Set()

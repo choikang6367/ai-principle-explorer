@@ -278,3 +278,42 @@ export function getScenariosForCategory(categoryId: Scenario['categoryId']) {
 export function getScenarioById(scenarioId: string) {
   return scenarios.find((scenario) => scenario.id === scenarioId)
 }
+
+export function adaptAttentionTargets(
+  scenario: Scenario,
+  inputTokens: readonly InputToken[],
+): readonly AttentionTarget[] {
+  const availableTokens = [...inputTokens]
+
+  return scenario.attentionTargets.flatMap((target) => {
+    const originalToken = scenario.tokens.find((token) => token.id === target.tokenId)
+    const originalText = originalToken?.text ?? ''
+    const sameIdIndex = availableTokens.findIndex((token) => token.id === target.tokenId)
+    const unusedTokenIndex = sameIdIndex >= 0
+      ? sameIdIndex
+      : availableTokens.findIndex((token) =>
+        token.text === originalText || token.text.includes(originalText) || originalText.includes(token.text),
+      )
+    const token = unusedTokenIndex >= 0
+      ? availableTokens[unusedTokenIndex]
+      : inputTokens.find((candidate) =>
+        candidate.text === originalText || candidate.text.includes(originalText) || originalText.includes(candidate.text),
+      )
+
+    if (!token) {
+      return []
+    }
+
+    if (unusedTokenIndex >= 0) {
+      availableTokens.splice(unusedTokenIndex, 1)
+    }
+    return [{
+      ...target,
+      tokenId: token.id,
+      sourceTokenId: target.tokenId,
+      explanation: token.text === originalText
+        ? target.explanation
+        : `“${token.text}”처럼 합쳐진 조각 안에서 ${target.explanation}`,
+    }]
+  })
+}

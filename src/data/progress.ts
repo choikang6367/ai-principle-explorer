@@ -2,7 +2,7 @@ import { categories } from './categories.ts'
 import { getScenarioById } from './scenarios.ts'
 import type { CategoryId, StageId } from '../types/experience'
 
-export const EXPERIENCE_PROGRESS_VERSION = 3 as const
+export const EXPERIENCE_PROGRESS_VERSION = 4 as const
 export const PROGRESS_STORAGE_KEY = 'ai-principle-explorer-progress'
 const MAX_PROGRESS_STORAGE_LENGTH = 4096
 
@@ -10,10 +10,13 @@ const stageOrder: readonly StageId[] = [
   'welcome',
   'categories',
   'questions',
+  'learning',
   'tokenize',
   'transformer',
   'attention',
   'prediction',
+  'generation',
+  'review',
   'compare',
   'complete',
 ]
@@ -25,6 +28,7 @@ export interface ExperienceProgress {
   stage: StageId
   selectedCategory: CategoryId | null
   selectedScenarioId: string | null
+  selectedInputTokenTexts: readonly string[] | null
   selectedAttentionTokenId: string | null
   studentCandidateId: string | null
 }
@@ -35,6 +39,7 @@ function emptyProgress(): ExperienceProgress {
     stage: 'welcome',
     selectedCategory: null,
     selectedScenarioId: null,
+    selectedInputTokenTexts: null,
     selectedAttentionTokenId: null,
     studentCandidateId: null,
   }
@@ -82,6 +87,17 @@ export function readSavedProgress(): ExperienceProgress {
       ? storedScenario.id
       : null
 
+    const storedInputTokenTexts = Array.isArray(parsed.selectedInputTokenTexts) &&
+      parsed.selectedInputTokenTexts.length <= 64 &&
+      parsed.selectedInputTokenTexts.every((text): text is string => typeof text === 'string' && text.length > 0)
+      ? parsed.selectedInputTokenTexts
+      : null
+    const sourceText = storedScenario?.tokens.map((token) => token.text).join('') ?? ''
+    const selectedInputTokenTexts = selectedScenarioId && storedInputTokenTexts && storedInputTokenTexts.length > 0 &&
+      storedInputTokenTexts.join('') === sourceText
+      ? storedInputTokenTexts
+      : null
+
     const storedAttentionTokenId = typeof parsed.selectedAttentionTokenId === 'string'
       ? parsed.selectedAttentionTokenId
       : null
@@ -120,6 +136,7 @@ export function readSavedProgress(): ExperienceProgress {
       stage: safeStage,
       selectedCategory,
       selectedScenarioId: isAtOrAfter(safeStage, 'questions') ? selectedScenarioId : null,
+      selectedInputTokenTexts: isAtOrAfter(safeStage, 'tokenize') ? selectedInputTokenTexts : null,
       selectedAttentionTokenId: isAtOrAfter(safeStage, 'attention') ? selectedAttentionTokenId : null,
       studentCandidateId: isAtOrAfter(safeStage, 'prediction') ? studentCandidateId : null,
     }

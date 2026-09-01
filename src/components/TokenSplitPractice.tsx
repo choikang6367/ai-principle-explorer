@@ -1,5 +1,5 @@
 import { useMemo, useState, type KeyboardEvent } from 'react'
-import type { Scenario, TokenizationComparison } from '../types/experience'
+import type { InputToken, Scenario, TokenizationComparison } from '../types/experience'
 
 function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: () => void) {
   if (event.key === 'Enter' || event.key === ' ' || event.key === 'Space') {
@@ -27,13 +27,37 @@ function groupUnits(units: readonly string[], breakPoints: ReadonlySet<number>) 
   return groups
 }
 
+function getBreakPoints(tokens: readonly InputToken[]) {
+  let offset = 0
+  return tokens.slice(0, -1).map((token) => {
+    offset += Array.from(token.text).length
+    return offset
+  })
+}
+
+function createPracticeTokens(scenario: Scenario, groups: readonly string[]) {
+  return groups.map((text, index) => ({
+    id: `${scenario.id}-practice-token-${String(index + 1).padStart(2, '0')}`,
+    text,
+    kind: /^[?？.!！。]+$/u.test(text) ? 'punctuation' as const : 'word' as const,
+  }))
+}
+
 function getComparison(scenario: Scenario): TokenizationComparison {
   return scenario.tokenizationComparison ?? {
     aiTokens: scenario.tokens.map((token) => token.text),
   }
 }
 
-export function TokenSplitPractice({ scenario }: { scenario: Scenario }) {
+export function TokenSplitPractice({
+  scenario,
+  initialTokens,
+  onTokenizationChange,
+}: {
+  scenario: Scenario
+  initialTokens?: readonly InputToken[]
+  onTokenizationChange?: (tokens: readonly InputToken[]) => void
+}) {
   const comparison = useMemo(() => getComparison(scenario), [scenario])
   const practiceUnits = useMemo(
     () => Array.from(scenario.tokens.map((token) => token.text).join('')),
@@ -50,27 +74,29 @@ export function TokenSplitPractice({ scenario }: { scenario: Scenario }) {
       return offset
     })
   }, [friendlyTokens])
-  const [selectedBreaks, setSelectedBreaks] = useState<ReadonlySet<number>>(() => new Set())
+  const [selectedBreaks, setSelectedBreaks] = useState<ReadonlySet<number>>(
+    () => new Set(initialTokens ? getBreakPoints(initialTokens) : []),
+  )
   const [showComparison, setShowComparison] = useState(false)
   const selectedGroups = groupUnits(practiceUnits, selectedBreaks)
   const matchesFriendlyShape = friendlyBreaks.length === selectedBreaks.size &&
     friendlyBreaks.every((breakPoint) => selectedBreaks.has(breakPoint))
 
   const toggleBreak = (breakPoint: number) => {
-    setSelectedBreaks((currentBreaks) => {
-      const nextBreaks = new Set(currentBreaks)
-      if (nextBreaks.has(breakPoint)) {
-        nextBreaks.delete(breakPoint)
-      } else {
-        nextBreaks.add(breakPoint)
-      }
-      return nextBreaks
-    })
+    const nextBreaks = new Set(selectedBreaks)
+    if (nextBreaks.has(breakPoint)) {
+      nextBreaks.delete(breakPoint)
+    } else {
+      nextBreaks.add(breakPoint)
+    }
+    setSelectedBreaks(nextBreaks)
+    onTokenizationChange?.(createPracticeTokens(scenario, groupUnits(practiceUnits, nextBreaks)))
   }
 
   const resetPractice = () => {
     setSelectedBreaks(new Set())
     setShowComparison(false)
+    onTokenizationChange?.(scenario.tokens)
   }
 
   return (
@@ -113,7 +139,7 @@ export function TokenSplitPractice({ scenario }: { scenario: Scenario }) {
       <div className="token-practice__result" role="status" aria-live="polite">
         <span>내가 만든 조각</span>
         <strong>{selectedBreaks.size > 0 ? selectedGroups.join(' | ') : '아직 끊지 않았어요'}</strong>
-        <small>정답 하나를 맞히는 활동이 아니라, AI가 문장을 나누는 방법을 느껴 보는 활동이에요.</small>
+        <small>정답 하나를 맞히는 활동이 아니라, AI가 문장을 나누는 방법을 느껴 보는 활동이에요. 선택한 조각은 다음 계산에 사용돼요.</small>
       </div>
       <div className="token-practice__actions">
         <button

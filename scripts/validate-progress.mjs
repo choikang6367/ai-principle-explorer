@@ -27,6 +27,7 @@ const emptyProgress = {
   stage: 'welcome',
   selectedCategory: null,
   selectedScenarioId: null,
+  selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
 }
@@ -97,6 +98,27 @@ assert.deepEqual(
     stage: 'prediction',
     selectedCategory: 'animal',
     selectedScenarioId: 'animal-knowledge-02',
+    selectedInputTokenTexts: ['강아지는왜', '꼬리를흔들까', '?'],
+    selectedAttentionTokenId: 'animal-knowledge-02-token-02',
+    studentCandidateId: 'animal-knowledge-02-cause',
+  }),
+  {
+    ...emptyProgress,
+    stage: 'prediction',
+    selectedCategory: 'animal',
+    selectedScenarioId: 'animal-knowledge-02',
+    selectedInputTokenTexts: ['강아지는왜', '꼬리를흔들까', '?'],
+    selectedAttentionTokenId: 'animal-knowledge-02-token-02',
+    studentCandidateId: 'animal-knowledge-02-cause',
+  },
+  'custom tokenization should restore with the active lesson state',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION,
+    stage: 'prediction',
+    selectedCategory: 'animal',
+    selectedScenarioId: 'animal-knowledge-02',
     selectedAttentionTokenId: 'not-a-token',
     studentCandidateId: 'animal-knowledge-02-cause',
   }),
@@ -142,6 +164,7 @@ saveProgress({
   stage: 'questions',
   selectedCategory: 'everyday',
   selectedScenarioId: null,
+  selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
 })
@@ -154,6 +177,7 @@ saveProgress({
   stage: 'questions',
   selectedCategory: 'animal',
   selectedScenarioId: 'x'.repeat(5000),
+  selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
 })
@@ -178,6 +202,7 @@ saveProgress({
   stage: 'questions',
   selectedCategory: 'animal',
   selectedScenarioId: null,
+  selectedInputTokenTexts: null,
   selectedAttentionTokenId: null,
   studentCandidateId: null,
 })

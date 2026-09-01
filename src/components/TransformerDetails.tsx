@@ -39,14 +39,14 @@ const STEP_GUIDES = [
   {
     label: '5. 여러 탐정',
     title: '서로 다른 단서를 보고 결과를 합쳐요.',
-    description: '여러 명의 탐정이 각자 다른 단서를 살펴보고, 그 결과를 합친 뒤 원래 정보와 함께 한 번 더 정리해요.',
-    formula: '여러 관찰 결과 → 하나의 정리된 결과',
+    description: '여러 명의 탐정이 각자 다른 단서를 살펴보고, 그 결과를 합친 뒤 원래 정보와 함께 한 번 더 정리해요. 실제 AI는 이런 블록을 여러 층 쌓고 숫자도 고르게 정리해요.',
+    formula: '여러 관찰 결과 → 합치기 → 숫자 고르게 맞추기',
   },
   {
     label: '6. 다음 조각',
     title: '가장 그럴듯한 다음 조각을 골라요.',
-    description: '마지막까지 정리한 뒤, 다음에 올 수 있는 말마다 가능성을 붙여요. 이 작은 예제에서는 가장 높은 하나를 골라요.',
-    formula: '다음 말 후보 → 가능성 비교 → 하나 고르기',
+    description: '마지막까지 정리한 뒤, 다음에 올 수 있는 말마다 가능성을 붙여요. 이 작은 예제에서는 가장 높은 하나를 골라요. 실제 AI는 여러 선택법으로 말투와 다양성을 조절할 수도 있어요.',
+    formula: '후보 → 가능성 → 선택 방법 → 하나 고르기',
   },
 ] as const
 
@@ -256,7 +256,7 @@ function StepFive({ result }: { result: TransformerCalculation }) {
   return (
     <>
       <p className="transformer-step__intro">
-        여러 방법으로 살펴본 결과를 한데 모아요. 원래 정보도 잃지 않도록 함께 남기고, 마지막으로 한 번 더 정리해요. 아래 숫자는 정보를 정리하는 모습을 아주 작게 보여 줘요.
+        여러 방법으로 살펴본 결과를 한데 모아요. 원래 정보도 잃지 않도록 함께 남기고, 숫자가 너무 커지거나 작아지지 않게 고르게 정리해요. 아래 숫자는 이 과정을 아주 작게 보여 줘요. 음수는 나쁜 숫자가 아니라 평균보다 작은 쪽이라는 뜻이에요.
       </p>
       <div className="transformer-head-grid">
         {result.heads.map((head) => (
@@ -270,8 +270,10 @@ function StepFive({ result }: { result: TransformerCalculation }) {
         <VectorLine label="두 결과를 한데 모으기" vector={result.concatenatedHeadResults[lastIndex]} />
         <VectorLine label="참고한 결과" vector={result.attentionOutput[lastIndex]} />
         <VectorLine label="원래 정보와 합치기" vector={result.residualAfterAttention[lastIndex]} />
+        <VectorLine label="숫자 크기 고르게 맞추기" vector={result.normalizedAfterAttention[lastIndex]} />
         <VectorLine label="한 번 더 정리하기" vector={result.feedForwardOutput[lastIndex]} />
-        <VectorLine label="다음 말을 고르기 전 모습" vector={result.residualOutput[lastIndex]} />
+        <VectorLine label="원래 정보와 다시 합치기" vector={result.residualOutput[lastIndex]} />
+        <VectorLine label="마지막으로 고르게 맞추기" vector={result.normalizedOutput[lastIndex]} />
       </div>
     </>
   )
