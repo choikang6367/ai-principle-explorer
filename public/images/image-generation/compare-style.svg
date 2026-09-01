@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" role="img">
+  <rect width="600" height="400" fill="#213b50"/><rect x="600" width="600" height="400" fill="#241f47"/>
+  <g fill="#f6d798"><circle cx="150" cy="112" r="68"/><circle cx="904" cy="112" r="68"/></g>
+  <g stroke="#bcefd8" stroke-width="10" fill="#708ea2" stroke-linejoin="round"><circle cx="295" cy="234" r="55"/><path d="m260 205-25-48 57 26M331 186l41-35-17 61"/><path d="M255 286h89v68h-89Z"/><path d="M810 286h189v68H810Z"/></g>
+  <g fill="#ff9e91"><rect x="768" y="187" width="24" height="24"/><rect x="810" y="155" width="34" height="34"/><rect x="1004" y="202" width="26" height="26"/><rect x="1051" y="164" width="40" height="40"/></g>
+  <path d="M596 25v350" stroke="#d9e5ef" stroke-opacity=".4" stroke-width="3" stroke-dasharray="10 12"/>
+  <g fill="#f6f8fb" font-family="sans-serif" font-weight="700" font-size="22"><text x="32" y="36">부드러운 선</text><text x="632" y="36">작은 픽셀 칸</text></g>
+</svg>

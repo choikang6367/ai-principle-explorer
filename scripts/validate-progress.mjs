@@ -6,6 +6,7 @@ import {
   readSavedProgress,
   saveProgress,
 } from '../src/data/progress.ts'
+import { defaultImagePromptSelections, imageCheckItems, imageDenoiseSteps } from '../src/data/imageGeneration.ts'
 
 const values = new Map()
 const localStorage = {
@@ -108,9 +109,66 @@ assert.deepEqual(
     stage: 'ask',
     selectedCategory: 'animal',
     selectedScenarioId: 'animal-knowledge-02',
-    hasAskedQuestion: false,
+    hasAskedQuestion: true,
   },
-  'legacy progress should migrate without inventing an answer state',
+  'current text progress should migrate without losing the sent answer state',
+)
+
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION,
+    stage: 'imageDenoise',
+  }),
+  { ...emptyProgress, stage: 'imagePrompt' },
+  'image stages without a complete prompt should fall back to prompt selection',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION - 1,
+    stage: 'imageResult',
+    selectedImageId: 'cat',
+    imageGuess: '고양이',
+  }),
+  { ...emptyProgress, stage: 'imagePrompt' },
+  'legacy image-reading stages should migrate to the new prompt lesson safely',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION,
+    stage: 'imageDenoise',
+    imagePromptSelections: defaultImagePromptSelections,
+    imageDenoiseStep: imageDenoiseSteps.length - 1,
+    imageComparePart: 'style',
+    imageCheckIds: ['prompt-match', 'prompt-match', 'not-an-item'],
+  }),
+  {
+    ...emptyProgress,
+    stage: 'imageDenoise',
+    imagePromptSelections: defaultImagePromptSelections,
+    imageDenoiseStep: imageDenoiseSteps.length - 1,
+    imageComparePart: 'style',
+    imageCheckIds: ['prompt-match'],
+  },
+  'valid image prompt and denoise progress should restore with sanitized checks',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION,
+    stage: 'imageComplete',
+    imagePromptSelections: defaultImagePromptSelections,
+    imageDenoiseStep: imageDenoiseSteps.length - 1,
+    imageComparePart: 'place',
+    imageCheckIds: imageCheckItems.map((item) => item.id),
+  }),
+  {
+    ...emptyProgress,
+    stage: 'imageComplete',
+    imagePromptSelections: defaultImagePromptSelections,
+    imageDenoiseStep: imageDenoiseSteps.length - 1,
+    imageComparePart: 'place',
+    imageCheckIds: imageCheckItems.map((item) => item.id),
+  },
+  'completed image progress should restore only after the full checklist is checked',
 )
 assert.deepEqual(
   readWith({
@@ -210,6 +268,25 @@ assert.notEqual(localStorage.getItem(PROGRESS_STORAGE_KEY), null, 'saveProgress 
 assert.equal(JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY)).hasAskedQuestion, true, 'saveProgress should persist the answer state')
 clearSavedProgress()
 assert.equal(localStorage.getItem(PROGRESS_STORAGE_KEY), null, 'clearSavedProgress should remove persisted progress')
+
+saveProgress({
+  version: EXPERIENCE_PROGRESS_VERSION,
+  stage: 'imageComplete',
+  selectedCategory: null,
+  selectedScenarioId: null,
+  selectedInputTokenTexts: null,
+  selectedAttentionTokenId: null,
+  studentCandidateId: null,
+  hasAskedQuestion: false,
+  imagePromptSelections: defaultImagePromptSelections,
+  imageDenoiseStep: imageDenoiseSteps.length - 1,
+  imageComparePart: 'place',
+  imageCheckIds: imageCheckItems.map((item) => item.id),
+})
+assert.equal(JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY)).stage, 'imageComplete', 'saveProgress should persist image completion')
+assert.deepEqual(JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY)).imagePromptSelections, defaultImagePromptSelections, 'saveProgress should persist image prompt choices')
+clearSavedProgress()
+assert.equal(localStorage.getItem(PROGRESS_STORAGE_KEY), null, 'clearSavedProgress should remove image progress too')
 
 saveProgress({
   version: EXPERIENCE_PROGRESS_VERSION,

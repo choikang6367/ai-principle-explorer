@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" role="img">
+  <rect width="600" height="400" fill="#24295a"/><rect x="600" width="600" height="400" fill="#274d4e"/>
+  <circle cx="270" cy="132" r="70" fill="#f8dfa3"/><g fill="#fff2b5"><circle cx="104" cy="91" r="4"/><circle cx="450" cy="72" r="5"/><circle cx="760" cy="68" r="4"/><circle cx="1080" cy="96" r="5"/></g>
+  <path d="M0 282h600v118H0Z" fill="#4d535b"/><path d="M600 282h600v118H600Z" fill="#355e52"/>
+  <path d="M70 300 180 156l110 144M372 300l98-116 100 116" fill="#344460"/>
+  <g fill="#89f5c5"><path d="m700 304 58-124 59 124Z"/><path d="m912 304 67-151 71 151Z"/><path d="m1090 304 48-103 50 103Z"/></g>
+  <path d="M596 25v350" stroke="#d9e5ef" stroke-opacity=".4" stroke-width="3" stroke-dasharray="10 12"/>
+  <g fill="#f6f8fb" font-family="sans-serif" font-weight="700" font-size="22"><text x="32" y="36">달 표면</text><text x="632" y="36">반짝이는 숲</text></g>
+</svg>

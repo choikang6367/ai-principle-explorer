@@ -1,12 +1,17 @@
 import { categories } from './categories.ts'
-import { getImageExperienceById, imageExperienceIds } from './imageExperiences.ts'
+import {
+  imageCheckItems,
+  imageComparisonParts,
+  imageDenoiseSteps,
+  isCompleteImagePromptSelections,
+} from './imageGeneration.ts'
 import { getScenarioById } from './scenarios.ts'
-import type { CategoryId, ImageExperienceId, StageId } from '../types/experience'
+import type { CategoryId, ImageComparisonPart, ImagePromptSelections, StageId } from '../types/experience'
 
-export const EXPERIENCE_PROGRESS_VERSION = 6 as const
+export const EXPERIENCE_PROGRESS_VERSION = 7 as const
 export const PROGRESS_STORAGE_KEY = 'ai-principle-explorer-progress'
 const MAX_PROGRESS_STORAGE_LENGTH = 4096
-const LEGACY_PROGRESS_VERSION = 5
+const LEGACY_PROGRESS_VERSION = 6
 
 const stageOrder: readonly StageId[] = [
   'welcome',
@@ -24,13 +29,41 @@ const stageOrder: readonly StageId[] = [
   'review',
   'compare',
   'complete',
-  'imageSelect',
-  'imageView',
-  'imageNumbers',
-  'imageFeatures',
-  'imagePrediction',
-  'imageResult',
+  'imageIntro',
+  'imagePrompt',
+  'imageClues',
+  'imageMap',
+  'imageNoise',
+  'imageDenoise',
+  'imageLatent',
+  'imageCompare',
+  'imageCheck',
+  'imageComplete',
 ]
+
+const imageStageOrder: readonly StageId[] = [
+  'imageIntro',
+  'imagePrompt',
+  'imageClues',
+  'imageMap',
+  'imageNoise',
+  'imageDenoise',
+  'imageLatent',
+  'imageCompare',
+  'imageCheck',
+  'imageComplete',
+]
+
+const legacyImageStageMap: Partial<Record<StageId, StageId>> = {
+  imageSelect: 'imageIntro',
+  imageView: 'imagePrompt',
+  imageNumbers: 'imageClues',
+  imageFeatures: 'imageMap',
+  imagePrediction: 'imageNoise',
+  imageResult: 'imageDenoise',
+}
+
+const legacyImageStageIds = new Set(Object.keys(legacyImageStageMap))
 
 const categoryIds = new Set<CategoryId>(categories.map((category) => category.id))
 
@@ -43,8 +76,10 @@ export interface ExperienceProgress {
   selectedAttentionTokenId: string | null
   studentCandidateId: string | null
   hasAskedQuestion: boolean
-  selectedImageId?: ImageExperienceId | null
-  imageGuess?: string | null
+  imagePromptSelections?: ImagePromptSelections | null
+  imageDenoiseStep?: number
+  imageComparePart?: ImageComparisonPart | null
+  imageCheckIds?: readonly string[] | null
 }
 
 function emptyProgress(): ExperienceProgress {
@@ -65,23 +100,57 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isStageId(value: unknown): value is StageId {
-  return typeof value === 'string' && stageOrder.includes(value as StageId)
+  return typeof value === 'string' && (stageOrder.includes(value as StageId) || legacyImageStageIds.has(value))
 }
 
 function isCategoryId(value: unknown): value is CategoryId {
   return typeof value === 'string' && categoryIds.has(value as CategoryId)
 }
 
-function isImageExperienceId(value: unknown): value is ImageExperienceId {
-  return typeof value === 'string' && imageExperienceIds.has(value as ImageExperienceId)
-}
-
 function isImageStageId(value: StageId): value is Extract<StageId, `image${string}`> {
-  return value.startsWith('image')
+  return imageStageOrder.includes(value)
 }
 
 function isAtOrAfter(stage: StageId, checkpoint: StageId) {
   return stageOrder.indexOf(stage) >= stageOrder.indexOf(checkpoint)
+}
+
+function isAtOrAfterImageStage(stage: StageId, checkpoint: StageId) {
+  return imageStageOrder.indexOf(stage) >= imageStageOrder.indexOf(checkpoint)
+}
+
+function readImagePromptSelections(value: unknown): ImagePromptSelections | null {
+  if (!isCompleteImagePromptSelections(value)) {
+    return null
+  }
+
+  const selections = value as ImagePromptSelections
+  return {
+    subject: selections.subject,
+    scene: selections.scene,
+    place: selections.place,
+    style: selections.style,
+    mood: selections.mood,
+  }
+}
+
+function isImageComparisonPart(value: unknown): value is ImageComparisonPart {
+  return typeof value === 'string' && imageComparisonParts.includes(value as ImageComparisonPart)
+}
+
+function readImageCheckIds(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  const validIds = new Set<string>(imageCheckItems.map((item) => item.id))
+  return [...new Set(value.filter((id): id is string => typeof id === 'string' && validIds.has(id)))]
+}
+
+function readImageDenoiseStep(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < imageDenoiseSteps.length
+    ? value
+    : 0
 }
 
 export function readSavedProgress(): ExperienceProgress {
@@ -102,23 +171,32 @@ export function readSavedProgress(): ExperienceProgress {
       return fallback
     }
 
-    const storedStage = isStageId(parsed.stage) ? parsed.stage : 'welcome'
+    const parsedStage = isStageId(parsed.stage) ? parsed.stage : 'welcome'
+    const storedStage = legacyImageStageMap[parsedStage] ?? parsedStage
 
     if (isImageStageId(storedStage)) {
-      const selectedImageId = isImageExperienceId(parsed.selectedImageId) ? parsed.selectedImageId : null
-      const selectedImage = getImageExperienceById(selectedImageId)
-      const safeImageStage = storedStage !== 'imageSelect' && !selectedImage
-        ? 'imageSelect'
-        : storedStage
-      const imageGuess = selectedImage && typeof parsed.imageGuess === 'string' && selectedImage.choices.some((choice) => choice === parsed.imageGuess)
-        ? parsed.imageGuess
-        : null
+      const imagePromptSelections = readImagePromptSelections(parsed.imagePromptSelections)
+      let safeImageStage = storedStage
+      if (safeImageStage !== 'imageIntro' && !imagePromptSelections) {
+        safeImageStage = 'imagePrompt'
+      }
+
+      const imageDenoiseStep = readImageDenoiseStep(parsed.imageDenoiseStep)
+      const imageComparePart = isImageComparisonPart(parsed.imageComparePart) ? parsed.imageComparePart : 'place'
+      const imageCheckIds = readImageCheckIds(parsed.imageCheckIds)
+
+      if (isAtOrAfterImageStage(safeImageStage, 'imageLatent') && imageDenoiseStep < imageDenoiseSteps.length - 1) {
+        safeImageStage = 'imageDenoise'
+      }
+      if (safeImageStage === 'imageComplete' && imageCheckIds.length < imageCheckItems.length) {
+        safeImageStage = 'imageCheck'
+      }
 
       return {
         ...fallback,
         stage: safeImageStage,
-        selectedImageId: selectedImage?.id ?? null,
-        imageGuess,
+        ...(imagePromptSelections ? { imagePromptSelections } : {}),
+        ...(imagePromptSelections ? { imageDenoiseStep, imageComparePart, imageCheckIds } : {}),
       }
     }
 
@@ -176,7 +254,7 @@ export function readSavedProgress(): ExperienceProgress {
     const hasAskedQuestion = Boolean(
       selectedScenarioId &&
       isAtOrAfter(safeStage, 'ask') &&
-      parsed.version === EXPERIENCE_PROGRESS_VERSION &&
+      (parsed.version === EXPERIENCE_PROGRESS_VERSION || parsed.version === LEGACY_PROGRESS_VERSION) &&
       parsed.hasAskedQuestion === true,
     )
 

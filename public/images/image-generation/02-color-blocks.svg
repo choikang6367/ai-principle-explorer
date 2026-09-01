@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img">
+  <defs>
+    <linearGradient id="blocks-sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#22224d"/><stop offset="1" stop-color="#375b70"/></linearGradient>
+    <linearGradient id="blocks-ground" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#47504e"/><stop offset="1" stop-color="#1d293a"/></linearGradient>
+  </defs>
+  <rect width="1200" height="760" fill="url(#blocks-sky)"/>
+  <circle cx="922" cy="168" r="102" fill="#f5d995" opacity=".82"/>
+  <path d="M0 560c170-62 278-45 406-18 152 32 272 27 414-28 136-54 267-55 380-18v264H0Z" fill="url(#blocks-ground)"/>
+  <path d="M0 612c205-50 341-2 520 22 202 27 355-30 680-42v168H0Z" fill="#263648" opacity=".8"/>
+  <g fill="#89f5c5" opacity=".36"><rect x="92" y="113" width="110" height="46" rx="18"/><rect x="232" y="202" width="176" height="62" rx="23"/><rect x="808" y="272" width="210" height="50" rx="20"/></g>
+  <g fill="#b9a4ff" opacity=".6"><circle cx="191" cy="493" r="46"/><circle cx="1042" cy="490" r="62"/><circle cx="716" cy="426" r="31"/></g>
+  <path d="M557 475h145v152H557z" fill="#ff9e91" opacity=".7"/>
+  <path d="M536 474h185l-30-62H567Z" fill="#ffd37c" opacity=".65"/>
+  <g fill="#f6f8fb" opacity=".75"><circle cx="252" cy="100" r="4"/><circle cx="593" cy="128" r="5"/><circle cx="1082" cy="110" r="4"/></g>
+</svg>

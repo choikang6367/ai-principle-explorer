@@ -88,6 +88,79 @@ export interface ImageExperience {
   explanation: string
 }
 
+export type ImagePromptPart = 'subject' | 'scene' | 'place' | 'style' | 'mood'
+
+export interface ImagePromptChoice {
+  id: string
+  label: string
+  shortLabel: string
+  description: string
+  promptText: string
+  emoji: string
+  accent: ImageAccent
+  signals: readonly number[]
+}
+
+export interface ImagePromptField {
+  id: ImagePromptPart
+  label: string
+  englishLabel: string
+  question: string
+  choices: readonly ImagePromptChoice[]
+}
+
+export interface ImagePromptSelections {
+  subject: string
+  scene: string
+  place: string
+  style: string
+  mood: string
+}
+
+export interface ImagePromptClue {
+  id: string
+  part: ImagePromptPart
+  label: string
+  phrase: string
+  description: string
+  areaLabel: string
+  x: number
+  y: number
+  width: number
+  height: number
+  signals: readonly number[]
+}
+
+export interface ImageDenoiseStep {
+  id: string
+  shortLabel: string
+  title: string
+  description: string
+  imagePath: string
+  alt: string
+  revealPercent: number
+}
+
+export type ImageComparisonPart = 'place' | 'style' | 'mood'
+
+export interface ImageComparison {
+  id: string
+  part: ImageComparisonPart
+  label: string
+  alternativeChoiceId: string
+  changeLabel: string
+  description: string
+  cueImagePath: string
+  cueImageAlt: string
+}
+
+export interface ImageCheckItem {
+  id: string
+  label: string
+  description: string
+  statusLabel: string
+}
+
 export type QuestionType = 'knowledge' | 'imagination' | 'opinion'
 
 export interface Category {
@@ -116,6 +189,18 @@ export type StageId =
   | 'review'
   | 'compare'
   | 'complete'
+  | 'imageIntro'
+  | 'imagePrompt'
+  | 'imageClues'
+  | 'imageMap'
+  | 'imageNoise'
+  | 'imageDenoise'
+  | 'imageLatent'
+  | 'imageCompare'
+  | 'imageCheck'
+  | 'imageComplete'
+  // Legacy image-reading stage IDs remain understood by the type layer so
+  // older saved values can be migrated safely without affecting text progress.
   | 'imageSelect'
   | 'imageView'
   | 'imageNumbers'

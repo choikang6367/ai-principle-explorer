@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" role="img">
+  <defs><linearGradient id="warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6ae76"/><stop offset="1" stop-color="#5f4265"/></linearGradient><linearGradient id="cool" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5a9fc4"/><stop offset="1" stop-color="#272d68"/></linearGradient></defs>
+  <rect width="600" height="400" fill="url(#warm)"/><rect x="600" width="600" height="400" fill="url(#cool)"/>
+  <circle cx="294" cy="137" r="70" fill="#ffe2a4"/><circle cx="906" cy="137" r="70" fill="#b6d9fa"/>
+  <path d="M0 300c166-56 309 4 600-23v123H0Z" fill="#846146" opacity=".82"/><path d="M600 300c166-56 309 4 600-23v123H600Z" fill="#304b77" opacity=".9"/>
+  <g fill="#fff2b5"><circle cx="114" cy="89" r="5"/><circle cx="465" cy="74" r="4"/></g><g fill="#c9e6ff"><circle cx="730" cy="89" r="5"/><circle cx="1080" cy="74" r="4"/></g>
+  <path d="M596 25v350" stroke="#d9e5ef" stroke-opacity=".4" stroke-width="3" stroke-dasharray="10 12"/>
+  <g fill="#f6f8fb" font-family="sans-serif" font-weight="700" font-size="22"><text x="32" y="36">따뜻하고 밝게</text><text x="632" y="36">차분하고 시원하게</text></g>
+</svg>

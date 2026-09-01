@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img">
+  <defs><linearGradient id="final-sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#11183c"/><stop offset="1" stop-color="#437a83"/></linearGradient><linearGradient id="final-ground" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#77817a"/><stop offset="1" stop-color="#274254"/></linearGradient><filter id="soft-glow"><feGaussianBlur stdDeviation="8"/></filter></defs>
+  <rect width="1200" height="760" fill="url(#final-sky)"/>
+  <circle cx="944" cy="145" r="111" fill="#ffe7ad" opacity=".2" filter="url(#soft-glow)"/><circle cx="944" cy="145" r="100" fill="#ffe7ad"/>
+  <g fill="#fff2b5"><circle cx="228" cy="162" r="6"/><circle cx="370" cy="278" r="5"/><circle cx="1060" cy="304" r="5"/><circle cx="764" cy="105" r="5"/><circle cx="478" cy="138" r="4"/><path d="m165 325 8 18 18 8-18 8-8 18-8-18-18-8 18-8ZM1072 224l7 15 15 7-15 7-7 15-7-15-15-7 15-7Z"/></g>
+  <path d="m0 522 175-78 164 78 164-116 190 106 153-90 154 74v264H0Z" fill="#355a6a"/>
+  <path d="M0 598c198-82 366-29 552 0 196 30 399-50 648-28v190H0Z" fill="url(#final-ground)"/>
+  <path d="M0 669c199-46 383-8 558 14 202 26 408-26 642-36v113H0Z" fill="#1f3b4d" opacity=".72"/>
+  <g fill="#91e0c0" opacity=".8"><path d="m119 527 49-88 48 88Z"/><path d="m1020 531 54-102 50 102Z"/></g>
+  <g stroke="#1a2435" stroke-width="9" stroke-linejoin="round">
+    <circle cx="606" cy="365" r="91" fill="#e2a16f"/><path d="m552 309-34-59 75 34M665 286l52-46-21 80" fill="#c77756"/>
+    <path d="M540 570c-5-108 13-169 74-188 60-19 111 18 124 87 10 53-6 114-23 160Z" fill="#718ea6"/>
+    <path d="M573 562c-34 37-51 77-58 113M687 562c34 33 47 72 53 113" fill="none" stroke="#c2d6e3"/>
+    <path d="M721 448h85v119h-85Z" fill="#ffd37c"/>
+  </g>
+  <path d="M808 449V267" stroke="#ffd37c" stroke-width="9"/><path d="M811 272h92l-37 45-55-4Z" fill="#ff9e91" stroke="#251f37" stroke-width="6"/>
+  <g fill="none" stroke="#bcefd8" stroke-width="5" opacity=".9"><path d="M556 368q13 12 26 0M632 368q13 12 26 0"/><path d="M584 409q22 15 44 0"/><path d="M530 620q79 23 156 0"/><path d="M172 597h29M1004 603h35"/></g>
+</svg>
