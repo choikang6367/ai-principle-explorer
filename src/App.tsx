@@ -30,6 +30,34 @@ function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: ()
   }
 }
 
+const previousStageByStage: Partial<Record<StageId, StageId>> = {
+  categories: 'welcome',
+  questions: 'categories',
+  tokenize: 'questions',
+  transformer: 'tokenize',
+  attention: 'transformer',
+  prediction: 'attention',
+  compare: 'prediction',
+  complete: 'compare',
+}
+
+const globalEnterSelectorByStage: Partial<Record<StageId, string>> = {
+  welcome: '.welcome-stage .primary-button',
+  categories: '.selection-panel__action:not(:disabled)',
+  questions: '.selection-panel__action:not(:disabled)',
+  tokenize: '.scenario-stage-actions .primary-button:not(:disabled)',
+  transformer: '.transformer-walkthrough__actions .primary-button:not(:disabled)',
+  attention: '.scenario-stage-actions .primary-button:not(:disabled)',
+  prediction: '.scenario-stage-actions .primary-button:not(:disabled)',
+  compare: '.scenario-stage-actions .primary-button:not(:disabled)',
+}
+
+function findVisibleButton(selector: string) {
+  return Array.from(document.querySelectorAll<HTMLButtonElement>(selector)).find(
+    (button) => button.getClientRects().length > 0 && !button.disabled,
+  )
+}
+
 function MobileSelectionDock({
   actionLabel,
   onContinue,
@@ -575,26 +603,44 @@ function App() {
     })
   }, [stage, selectedCategory, selectedScenarioId, selectedAttentionTokenId, studentCandidateId])
 
-  const handleGlobalKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      const previousStage: Partial<Record<StageId, StageId>> = {
-        categories: 'welcome',
-        questions: 'categories',
-        tokenize: 'questions',
-        transformer: 'tokenize',
-        attention: 'transformer',
-        prediction: 'attention',
-        compare: 'prediction',
-        complete: 'compare',
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: WindowEventMap['keydown']) => {
+      if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) {
+        return
       }
-      const nextStage = previousStage[stage]
 
-      if (nextStage) {
-        event.preventDefault()
-        setStage(nextStage)
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        const nextStage = previousStageByStage[stage]
+
+        if (nextStage) {
+          event.preventDefault()
+          setStage(nextStage)
+        }
+        return
       }
+
+      if (event.key !== 'Enter' && event.key !== 'NumpadEnter') {
+        return
+      }
+
+      const target = event.target instanceof Element ? event.target : null
+      if (target?.closest('button, a, input, textarea, select, [contenteditable="true"]')) {
+        return
+      }
+
+      const selector = globalEnterSelectorByStage[stage]
+      const button = selector ? findVisibleButton(selector) : undefined
+      if (!button) {
+        return
+      }
+
+      event.preventDefault()
+      button.click()
     }
-  }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [stage])
 
   const handleCategorySelect = (categoryId: CategoryId) => {
     setSelectedCategory(categoryId)
@@ -625,7 +671,6 @@ function App() {
       data-viewport-height={viewport.heightMode}
       data-orientation={viewport.orientation}
       data-pointer={viewport.pointer}
-      onKeyDown={handleGlobalKeyDown}
     >
       <div className="background-grid" aria-hidden="true" />
       <div className="background-glow background-glow--one" aria-hidden="true" />

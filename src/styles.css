@@ -4068,3 +4068,68 @@ kbd {
 .app-shell[data-viewport-height="short"] {
   --header-height: 64px;
 }
+
+/* Keep Korean words together so responsive copy breaks at natural word boundaries. */
+body {
+  word-break: keep-all;
+}
+
+@media (max-width: 900px) {
+  /* Give the breadcrumb and progress path separate rows before the layout gets tight. */
+  .stage-topline {
+    display: block;
+  }
+
+  .stage-progress {
+    width: 100%;
+    min-width: 0;
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .stage-progress__item {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .token-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(28px, 34px);
+    gap: 6px;
+    align-items: stretch;
+  }
+
+  .token-chip {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .token-chip--punctuation {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .welcome-stage h1 {
+    font-size: clamp(2.65rem, 13.2vw, 3.15rem);
+  }
+
+  .token-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) 28px;
+    gap: 4px;
+  }
+
+  .token-chip {
+    padding-inline: 4px;
+    font-size: 0.74rem;
+    letter-spacing: -0.055em;
+  }
+
+  .token-chip__index {
+    font-size: 0.42rem;
+  }
+}
