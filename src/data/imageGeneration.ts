@@ -87,6 +87,9 @@ export const defaultImagePromptSelections: ImagePromptSelections = {
   mood: 'warm-bright',
 }
 
+export const imagePromptQualityCues = ['중앙 구도', '앞·뒤 깊이', '선명한 윤곽', '풍부한 세부'] as const
+export const imagePromptQualitySentence = '주인공이 잘 보이는 중앙 구도와 앞·뒤 깊이가 느껴지는 배치, 선명한 윤곽과 풍부한 세부 묘사를 넣어 주세요.'
+
 const clueCopy: Record<ImagePromptPart, { description: string; areaLabel: string; x: number; y: number; width: number; height: number }> = {
   subject: {
     description: '주인공 단서는 그림 가운데에서 누구의 모습과 크기를 만들지 안내해요.',
@@ -165,7 +168,7 @@ export function getImagePromptSentence(selections: ImagePromptSelections) {
     return ''
   }
 
-  return `${place.promptText}을 배경으로, ${subject.promptText}${subjectParticle(subject.promptText)} ${scene.promptText} 모습을 ${style.promptText} 이미지로 만들고 ${mood.promptText}으로 표현해 주세요.`
+  return `${place.promptText}을 배경으로, ${subject.promptText}${subjectParticle(subject.promptText)} ${scene.promptText} 모습을 ${style.promptText} 이미지로 만들고 ${mood.promptText}으로 표현해 주세요. ${imagePromptQualitySentence}`
 }
 
 export function getImagePromptClues(selections: ImagePromptSelections): readonly ImagePromptClue[] {

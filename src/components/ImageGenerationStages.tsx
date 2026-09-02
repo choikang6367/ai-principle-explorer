@@ -1,10 +1,11 @@
-import { useId, useMemo, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   defaultImagePromptSelections,
   getImageComparisonSelections,
   getImagePromptChoice,
   getImagePromptClues,
   getImagePromptSentence,
+  imagePromptQualityCues,
   imageCheckItems,
   imageComparisonOptions,
   imageDenoiseSteps,
@@ -19,6 +20,7 @@ import type {
   ImagePromptPart,
   ImagePromptSelections,
 } from '../types/experience'
+import { GeneratedArtwork } from './ImageArtwork'
 
 const imageGenerationStageLabels = ['소개', '프롬프트', '의미 단서', '숫자 지도', '노이즈', '여러 번 정리', '잠재 공간', '비교', '검사', '완료']
 const comparisonParts: readonly ImageComparisonPart[] = ['place', 'style', 'mood']
@@ -32,11 +34,6 @@ function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: ()
 
 function assetSource(path: string) {
   return `${import.meta.env.BASE_URL}${path}`
-}
-
-function generationStyle(selections: ImagePromptSelections): CSSProperties {
-  const mood = getImagePromptChoice('mood', selections.mood)
-  return { '--generation-accent': `var(--${mood?.accent ?? 'mint'})` } as CSSProperties
 }
 
 function ImageGenerationProgress({ current }: { current: number }) {
@@ -145,109 +142,6 @@ function ImageGenerationActions({
         <span className="stage-note__mark" aria-hidden="true">i</span>
         {note}
       </p>
-    </div>
-  )
-}
-
-function GeneratedArtwork({
-  selections,
-  className = '',
-  label,
-}: {
-  selections: ImagePromptSelections
-  className?: string
-  label?: string
-}) {
-  const artworkId = useId().replace(/:/gu, '')
-  const skyGradientId = `generation-art-sky-${artworkId}`
-  const groundGradientId = `generation-art-ground-${artworkId}`
-  const subject = getImagePromptChoice('subject', selections.subject) ?? getImagePromptChoice('subject', defaultImagePromptSelections.subject)
-  const scene = getImagePromptChoice('scene', selections.scene) ?? getImagePromptChoice('scene', defaultImagePromptSelections.scene)
-  const place = getImagePromptChoice('place', selections.place) ?? getImagePromptChoice('place', defaultImagePromptSelections.place)
-  const style = getImagePromptChoice('style', selections.style) ?? getImagePromptChoice('style', defaultImagePromptSelections.style)
-  const mood = getImagePromptChoice('mood', selections.mood) ?? getImagePromptChoice('mood', defaultImagePromptSelections.mood)
-  const artLabel = label ?? `선택한 프롬프트를 반영한 교육용 구성 그림: ${getImagePromptSentence(selections)}`
-
-  return (
-    <div
-      className={`generation-art ${className}`}
-      data-place={place?.id}
-      data-style={style?.id}
-      data-mood={mood?.id}
-      data-subject={subject?.id}
-      style={generationStyle(selections)}
-      role="img"
-      aria-label={artLabel}
-    >
-      <svg className="generation-art__svg" viewBox="0 0 640 420" aria-hidden="true" focusable="false">
-        <defs>
-          <linearGradient id={skyGradientId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#161c43" />
-            <stop offset="1" stopColor="#315f73" />
-          </linearGradient>
-          <linearGradient id={groundGradientId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#52666a" />
-            <stop offset="1" stopColor="#20354a" />
-          </linearGradient>
-        </defs>
-        <rect className="generation-art__sky" width="640" height="420" fill={`url(#${skyGradientId})`} />
-        <circle className="generation-art__moon" cx="510" cy="82" r="59" />
-        <g className="generation-art__stars" fill="#fff2b5">
-          <circle cx="96" cy="65" r="3" /><circle cx="188" cy="112" r="4" /><circle cx="408" cy="50" r="3" /><circle cx="588" cy="164" r="3" />
-          <path d="m112 164 6 14 14 6-14 6-6 14-6-14-14-6 14-6ZM373 90l5 11 11 5-11 5-5 11-5-11-11-5 11-5Z" />
-        </g>
-        {place?.id === 'sparkle-forest' ? (
-          <g className="generation-art__forest" fill="#4c866b">
-            <path d="m65 322 50-132 50 132Z" /><path d="m196 322 67-169 67 169Z" /><path d="m515 322 52-143 53 143Z" />
-            <circle cx="111" cy="194" r="8" fill="#d8f27f" /><circle cx="292" cy="164" r="9" fill="#89f5c5" /><circle cx="557" cy="190" r="7" fill="#ffd37c" />
-          </g>
-        ) : null}
-        {place?.id === 'deep-ocean' ? (
-          <g className="generation-art__ocean" fill="none" stroke="#8ecbff" strokeWidth="6" opacity=".75">
-            <path d="M0 116q46-30 92 0t92 0 92 0 92 0 92 0 92 0 92 0" />
-            <path d="M0 178q46-30 92 0t92 0 92 0 92 0 92 0 92 0 92 0" />
-            <circle cx="92" cy="250" r="8" fill="#b9a4ff" stroke="none" /><circle cx="148" cy="212" r="5" fill="#89f5c5" stroke="none" />
-          </g>
-        ) : null}
-        <path className="generation-art__ground" d="M0 302q112-38 226 0t204 0q102-36 210-8v126H0Z" fill={`url(#${groundGradientId})`} />
-        <path className="generation-art__ground-line" d="M0 354q119-22 226 6t207-3q106-24 207-11" fill="none" stroke="#8fb6ae" strokeWidth="3" opacity=".55" />
-        {place?.id === 'moon-surface' ? (
-          <g className="generation-art__craters" fill="#9a8d78" opacity=".5">
-            <ellipse cx="88" cy="352" rx="24" ry="9" /><ellipse cx="181" cy="386" rx="39" ry="11" /><ellipse cx="538" cy="350" rx="31" ry="9" />
-          </g>
-        ) : null}
-        <g className="generation-art__subject">
-          {subject?.id === 'scout-robot' ? (
-            <>
-              <rect x="278" y="177" width="102" height="107" rx="24" fill="#8294ab" />
-              <rect x="298" y="198" width="62" height="38" rx="12" fill="#1c2b43" />
-              <circle cx="318" cy="217" r="7" fill="#89f5c5" /><circle cx="342" cy="217" r="7" fill="#ff9e91" />
-              <path d="M328 177v-29M328 148l16-15" fill="none" stroke="#ffd37c" strokeWidth="8" strokeLinecap="round" />
-              <path d="M294 284v43M364 284v43M275 327h38M345 327h38" fill="none" stroke="#b8cee0" strokeWidth="14" strokeLinecap="round" />
-            </>
-          ) : (
-            <>
-              <circle cx="329" cy="174" r="57" fill={subject?.id === 'cape-fox' ? '#dc875b' : '#e2a16f'} />
-              <path d="m288 137-31-55 63 29M368 110l48-39-17 66" fill={subject?.id === 'cape-fox' ? '#b7624d' : '#c77756'} />
-              <circle cx="308" cy="174" r="6" fill="#18253a" /><circle cx="350" cy="174" r="6" fill="#18253a" />
-              <path d="M319 207q13 12 27 0" fill="none" stroke="#18253a" strokeWidth="5" strokeLinecap="round" />
-              <path d="M276 323q2-100 53-118 60-21 103 32 22 28 27 86Z" fill={subject?.id === 'cape-fox' ? '#5d7790' : '#718ea6'} />
-              <path d="M298 282q-34 38-44 69M369 282q35 33 46 69" fill="none" stroke="#c2d6e3" strokeWidth="13" strokeLinecap="round" />
-            </>
-          )}
-        </g>
-        {scene?.id === 'hold-flag' ? (
-          <g className="generation-art__flag"><path d="M398 285V133" stroke="#ffd37c" strokeWidth="7" /><path d="M401 137h74l-30 37-44-4Z" fill="#ff9e91" /></g>
-        ) : null}
-        {scene?.id === 'paint-stars' ? (
-          <g className="generation-art__paint"><path d="M409 284q26-20 52 0" fill="none" stroke="#ffd37c" strokeWidth="9" /><path d="m453 272 32-62" stroke="#f6f8fb" strokeWidth="7" /><path d="m480 203 21-9" stroke="#ff9e91" strokeWidth="10" strokeLinecap="round" /></g>
-        ) : null}
-        {scene?.id === 'find-rock' ? (
-          <path className="generation-art__rock" d="m397 307 35-31 45 23-16 30-54 3Z" fill="#89f5c5" />
-        ) : null}
-      </svg>
-      <span className="generation-art__badge">EDUCATIONAL COMPOSITE</span>
-      <span className="generation-art__caption">{subject?.shortLabel} · {place?.shortLabel} · {style?.shortLabel}</span>
     </div>
   )
 }
@@ -388,7 +282,7 @@ export function ImagePromptStage({
       />
       <div className="generation-prompt-layout">
         <article className="generation-card generation-prompt-card">
-          <div className="generation-card__topline"><span>CHOOSE YOUR INGREDIENTS</span><span>5 PARTS / READY-MADE OPTIONS</span></div>
+          <div className="generation-card__topline"><span>CHOOSE YOUR INGREDIENTS</span><span>5 PARTS / DETAIL CUES ADDED</span></div>
           <div className="generation-prompt-fields">
             {imagePromptFields.map((field) => (
               <fieldset className="generation-prompt-field" key={field.id}>
@@ -419,6 +313,12 @@ export function ImagePromptStage({
               const selected = getImagePromptChoice(field.id, selections[field.id])
               return <span key={field.id}><b>{field.label}</b>{selected?.shortLabel ?? '고르기'}</span>
             })}
+          </div>
+          <div className="generation-prompt-preview__quality">
+            <div className="generation-prompt-preview__quality-heading"><span>DETAIL BOOST</span><small>결과를 더 분명하게 만드는 안내</small></div>
+            <div className="generation-prompt-preview__quality-cues">
+              {imagePromptQualityCues.map((cue) => <span key={cue}>{cue}</span>)}
+            </div>
           </div>
           <p className="generation-prompt-preview__note">문장을 그대로 그림에 붙이는 것이 아니라, 관련된 의미를 숫자 단서로 바꾸어 참고한다고 배워요.</p>
         </aside>

@@ -8,6 +8,8 @@ import {
   getImagePromptChoice,
   getImagePromptClues,
   getImagePromptSentence,
+  imagePromptQualityCues,
+  imagePromptQualitySentence,
   imageCheckItems,
   imageComparisonOptions,
   imageDenoiseSteps,
@@ -76,6 +78,12 @@ for (const [part, choiceId] of Object.entries(defaultImagePromptSelections)) {
 
 const defaultSentence = getImagePromptSentence(defaultImagePromptSelections)
 requireText(defaultSentence, 'default prompt sentence')
+requireText(imagePromptQualitySentence, 'image prompt quality sentence')
+for (const cue of imagePromptQualityCues) {
+  if (!defaultSentence.includes(cue)) {
+    report(`default prompt sentence should include quality cue ${cue}`)
+  }
+}
 for (const field of imagePromptFields) {
   const selectedChoice = getImagePromptChoice(field.id, defaultImagePromptSelections[field.id])
   if (selectedChoice && !defaultSentence.includes(selectedChoice.promptText)) {
