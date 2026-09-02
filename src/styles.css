@@ -7488,6 +7488,7 @@ body {
   border: 1px solid rgba(207, 224, 240, 0.16);
   border-radius: 5px;
   box-shadow: 0 18px 38px rgba(2, 12, 25, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+  container-type: inline-size;
 }
 
 .generation-art::before {
@@ -7516,6 +7517,134 @@ body {
   width: 100%;
   height: 100%;
   shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+}
+
+.generation-art__background,
+.generation-art__scene-object,
+.generation-art__subject,
+.generation-art__fine-detail,
+.generation-art__process-noise {
+  transition: opacity 260ms ease, filter 260ms ease;
+}
+
+.generation-art__fine-detail {
+  opacity: 0.82;
+}
+
+.generation-art__grain {
+  mix-blend-mode: soft-light;
+}
+
+.generation-art__process-noise {
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+
+.generation-art[data-process-step]::after {
+  border-style: solid;
+  opacity: 0.62;
+}
+
+.generation-art[data-process-step='0'] .generation-art__background,
+.generation-art[data-process-step='0'] .generation-art__scene-object,
+.generation-art[data-process-step='0'] .generation-art__subject,
+.generation-art[data-process-step='0'] .generation-art__fine-detail {
+  opacity: 0;
+}
+
+.generation-art[data-process-step='0'] .generation-art__process-noise {
+  opacity: 1;
+}
+
+.generation-art[data-process-step='1'] .generation-art__background {
+  opacity: 0.62;
+  filter: blur(18px) saturate(0.72);
+}
+
+.generation-art[data-process-step='1'] .generation-art__scene-object,
+.generation-art[data-process-step='1'] .generation-art__subject {
+  opacity: 0.16;
+  filter: blur(24px);
+}
+
+.generation-art[data-process-step='1'] .generation-art__fine-detail {
+  opacity: 0;
+}
+
+.generation-art[data-process-step='1'] .generation-art__process-noise {
+  opacity: 0.68;
+}
+
+.generation-art[data-process-step='2'] .generation-art__background {
+  opacity: 0.78;
+  filter: blur(10px) saturate(0.82);
+}
+
+.generation-art[data-process-step='2'] .generation-art__scene-object,
+.generation-art[data-process-step='2'] .generation-art__subject {
+  opacity: 0.48;
+  filter: blur(12px) grayscale(0.32);
+}
+
+.generation-art[data-process-step='2'] .generation-art__fine-detail {
+  opacity: 0;
+}
+
+.generation-art[data-process-step='2'] .generation-art__process-noise {
+  opacity: 0.48;
+}
+
+.generation-art[data-process-step='3'] .generation-art__background {
+  opacity: 0.9;
+  filter: blur(4px) saturate(0.9);
+}
+
+.generation-art[data-process-step='3'] .generation-art__scene-object,
+.generation-art[data-process-step='3'] .generation-art__subject {
+  opacity: 0.78;
+  filter: blur(3px) grayscale(0.14);
+}
+
+.generation-art[data-process-step='3'] .generation-art__fine-detail {
+  opacity: 0.08;
+}
+
+.generation-art[data-process-step='3'] .generation-art__process-noise {
+  opacity: 0.3;
+}
+
+.generation-art[data-process-step='4'] .generation-art__background,
+.generation-art[data-process-step='4'] .generation-art__scene-object,
+.generation-art[data-process-step='4'] .generation-art__subject {
+  opacity: 0.94;
+  filter: blur(0.8px);
+}
+
+.generation-art[data-process-step='4'] .generation-art__fine-detail {
+  opacity: 0.28;
+}
+
+.generation-art[data-process-step='4'] .generation-art__process-noise {
+  opacity: 0.16;
+}
+
+.generation-art[data-process-step='5'] .generation-art__fine-detail {
+  opacity: 0.72;
+}
+
+.generation-art[data-process-step='5'] .generation-art__process-noise {
+  opacity: 0.045;
+}
+
+@container (max-width: 360px) {
+  .generation-art__fine-detail {
+    opacity: 0.5;
+  }
+
+  .generation-art__micro-detail {
+    display: none;
+  }
 }
 
 .generation-art__mood-wash,
@@ -8482,6 +8611,19 @@ body {
   object-fit: cover;
   opacity: 0;
   transition: opacity 180ms ease;
+}
+
+.generation-process-art {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.generation-process-art::after {
+  inset: 10px;
 }
 
 .generation-process-figure__asset.is-loaded {
@@ -9758,7 +9900,7 @@ body {
   }
 
   .generation-process-figure__frame {
-    aspect-ratio: 1.35;
+    aspect-ratio: 1.52;
   }
 
   .generation-denoise-current {

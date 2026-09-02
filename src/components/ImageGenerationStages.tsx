@@ -149,20 +149,35 @@ function ImageGenerationActions({
   )
 }
 
-function ProcessImage({ step, className = '' }: { step: ImageDenoiseStep; className?: string }) {
+function ProcessImage({
+  step,
+  selections,
+  stepIndex,
+  className = '',
+}: {
+  step: ImageDenoiseStep
+  selections: ImagePromptSelections
+  stepIndex: number
+  className?: string
+}) {
   const [assetState, setAssetState] = useState<'loading' | 'loaded' | 'failed'>('loading')
+  const isVectorStep = step.imagePath.endsWith('.svg')
 
   return (
     <figure className={`generation-process-figure ${className}`}>
       <div className="generation-process-figure__frame">
-        <img
-          className={`generation-process-figure__asset ${assetState === 'loaded' ? 'is-loaded' : ''} ${assetState === 'failed' ? 'is-failed' : ''}`}
-          src={assetSource(step.imagePath)}
-          alt={step.alt}
-          onLoad={() => setAssetState('loaded')}
-          onError={() => setAssetState('failed')}
-        />
-        {assetState !== 'loaded' ? (
+        {isVectorStep ? (
+          <GeneratedArtwork selections={selections} processStep={stepIndex} className="generation-process-art" label={step.alt} />
+        ) : (
+          <img
+            className={`generation-process-figure__asset ${assetState === 'loaded' ? 'is-loaded' : ''} ${assetState === 'failed' ? 'is-failed' : ''}`}
+            src={assetSource(step.imagePath)}
+            alt={step.alt}
+            onLoad={() => setAssetState('loaded')}
+            onError={() => setAssetState('failed')}
+          />
+        )}
+        {!isVectorStep && assetState !== 'loaded' ? (
           <div className={`generation-process-figure__fallback ${assetState === 'failed' ? 'is-failed' : ''}`} role={assetState === 'failed' ? 'status' : undefined}>
             <span className="generation-process-figure__fallback-icon" aria-hidden="true">◌</span>
             <strong>{assetState === 'failed' ? '그림 자료를 불러오지 못했어요.' : '그림 자료를 준비하고 있어요.'}</strong>
@@ -449,7 +464,7 @@ export function ImageMapStage({
   )
 }
 
-export function ImageNoiseStage({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
+export function ImageNoiseStage({ selections, onBack, onNext }: { selections: ImagePromptSelections; onBack: () => void; onNext: () => void }) {
   const noiseStep = imageDenoiseSteps[0]
 
   return (
@@ -465,7 +480,7 @@ export function ImageNoiseStage({ onBack, onNext }: { onBack: () => void; onNext
       <div className="generation-noise-layout">
         <article className="generation-card generation-noise-card">
           <div className="generation-card__topline"><span>STARTING POINT / RANDOM NOISE</span><span>0% STRUCTURE</span></div>
-          <ProcessImage step={noiseStep} className="generation-noise-image" />
+          <ProcessImage step={noiseStep} selections={selections} stepIndex={0} className="generation-noise-image" />
           <div className="generation-noise-callout"><span aria-hidden="true">01</span><div><strong>노이즈는 정답 그림이 아니에요.</strong><p>여러 점과 색이 섞여 있는 시작 재료예요. 다음 단계부터 글의 단서를 참고하며 구조를 정리해 봅니다.</p></div></div>
         </article>
         <aside className="generation-info-card">
@@ -519,7 +534,7 @@ export function ImageDenoiseStage({
         <article className="generation-card generation-denoise-card">
           <div className="generation-card__topline"><span>NOISE → STRUCTURE → DETAILS</span><span>{String(safeStepIndex + 1).padStart(2, '0')} / 07</span></div>
           <div className="generation-denoise-image-wrap">
-            <ProcessImage step={displayedStep} className="generation-denoise-image" />
+            <ProcessImage step={displayedStep} selections={selections} stepIndex={safeStepIndex} className="generation-denoise-image" />
             <div className="generation-denoise-progress" style={{ width: `${step.revealPercent}%` }} aria-hidden="true" />
           </div>
           <div className="generation-denoise-current" aria-live="polite">

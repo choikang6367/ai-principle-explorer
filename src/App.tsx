@@ -1137,7 +1137,7 @@ function App() {
               onNext={() => setStage('imageNoise')}
             />
           ) : stage === 'imageNoise' ? (
-            <ImageNoiseStage onBack={() => setStage('imageMap')} onNext={() => setStage('imageDenoise')} />
+            <ImageNoiseStage selections={imagePromptSelections} onBack={() => setStage('imageMap')} onNext={() => setStage('imageDenoise')} />
           ) : stage === 'imageDenoise' ? (
             <ImageDenoiseStage
               selections={imagePromptSelections}
