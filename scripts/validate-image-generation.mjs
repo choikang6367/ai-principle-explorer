@@ -168,10 +168,30 @@ for (const step of imageDenoiseSteps) {
   if (!Number.isFinite(step.revealPercent) || step.revealPercent < 0 || step.revealPercent > 100 || step.revealPercent < previousReveal) {
     report(`denoise step ${step.id} has an invalid reveal order`)
   }
+  if (!Array.isArray(step.activeParts)) {
+    report(`denoise step ${step.id} should provide active prompt parts`)
+  } else {
+    const activeParts = new Set(step.activeParts)
+    if (activeParts.size !== step.activeParts.length) {
+      report(`denoise step ${step.id} has duplicate active prompt parts`)
+    }
+    for (const part of activeParts) {
+      if (!requiredPromptParts.has(part)) {
+        report(`denoise step ${step.id} references unknown active prompt part ${part}`)
+      }
+    }
+  }
   previousReveal = step.revealPercent
 }
 if (imageDenoiseSteps[0]?.id !== 'noise' || imageDenoiseSteps.at(-1)?.id !== 'final') {
   report('denoise stages should start with noise and end with final')
+}
+if (imageDenoiseSteps[0]?.activeParts.length !== 0) {
+  report('noise stage should not expose any prompt part')
+}
+const finalActiveParts = new Set(imageDenoiseSteps.at(-1)?.activeParts ?? [])
+if (finalActiveParts.size !== requiredPromptParts.size || [...requiredPromptParts].some((part) => !finalActiveParts.has(part))) {
+  report('final denoise stage should include every prompt part')
 }
 
 const comparisonIds = new Set()

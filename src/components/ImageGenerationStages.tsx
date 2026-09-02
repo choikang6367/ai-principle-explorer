@@ -23,6 +23,7 @@ import type {
   ImagePromptSelections,
 } from '../types/experience'
 import { GeneratedArtwork } from './ImageArtwork'
+import { ImageProcessArtwork } from './ImageProcessArtwork'
 import { ImageResultArtwork } from './ImageResultArtwork'
 
 const imageGenerationStageLabels = ['소개', '프롬프트', '의미 단서', '숫자 지도', '노이즈', '여러 번 정리', '잠재 공간', '비교', '검사', '완료']
@@ -161,13 +162,13 @@ function ProcessImage({
   className?: string
 }) {
   const [assetState, setAssetState] = useState<'loading' | 'loaded' | 'failed'>('loading')
-  const isVectorStep = step.imagePath.endsWith('.svg')
+  const isProcessStep = stepIndex < imageDenoiseSteps.length - 1
 
   return (
     <figure className={`generation-process-figure ${className}`}>
       <div className="generation-process-figure__frame">
-        {isVectorStep ? (
-          <GeneratedArtwork selections={selections} processStep={stepIndex} className="generation-process-art" label={step.alt} />
+        {isProcessStep ? (
+          <ImageProcessArtwork selections={selections} stepIndex={stepIndex} label={step.alt} />
         ) : (
           <img
             className={`generation-process-figure__asset ${assetState === 'loaded' ? 'is-loaded' : ''} ${assetState === 'failed' ? 'is-failed' : ''}`}
@@ -177,7 +178,7 @@ function ProcessImage({
             onError={() => setAssetState('failed')}
           />
         )}
-        {!isVectorStep && assetState !== 'loaded' ? (
+        {!isProcessStep && assetState !== 'loaded' ? (
           <div className={`generation-process-figure__fallback ${assetState === 'failed' ? 'is-failed' : ''}`} role={assetState === 'failed' ? 'status' : undefined}>
             <span className="generation-process-figure__fallback-icon" aria-hidden="true">◌</span>
             <strong>{assetState === 'failed' ? '그림 자료를 불러오지 못했어요.' : '그림 자료를 준비하고 있어요.'}</strong>
@@ -511,9 +512,11 @@ export function ImageDenoiseStage({
 }) {
   const safeStepIndex = Math.min(Math.max(stepIndex, 0), imageDenoiseSteps.length - 1)
   const step = imageDenoiseSteps[safeStepIndex]
+  const activeParts: readonly ImagePromptPart[] = step.activeParts
   const clues = useMemo(() => getImagePromptClues(selections), [selections])
   const [selectedClueId, setSelectedClueId] = useState(clues[0]?.id ?? '')
-  const selectedClue = clues.find((clue) => clue.id === selectedClueId) ?? clues[0]
+  const activeClues = clues.filter((clue) => activeParts.includes(clue.part))
+  const selectedClue = activeClues.find((clue) => clue.id === selectedClueId) ?? activeClues[0]
   const isFinal = safeStepIndex === imageDenoiseSteps.length - 1
   const selectedPreset = getImagePromptPreset(selections)
   const displayedStep: ImageDenoiseStep = isFinal && selectedPreset
@@ -572,24 +575,33 @@ export function ImageDenoiseStage({
         </article>
         <aside className="generation-info-card generation-denoise-inspector">
           <span className="generation-info-card__number">05</span>
-          <p className="generation-info-card__label">단서와 그림 연결하기</p>
-          <h2>AI가 지금<br /><span>이 단서를 참고해요.</span></h2>
+          <p className="generation-info-card__label">현재 단계의 우선 단서</p>
+          <h2>
+            {step.activeParts.length === 0 ? <>아직 특정 단서를<br /><span>쓰지 않아요.</span></> : null}
+            {step.activeParts.length > 0 && !isFinal ? <>지금은 이 단서를<br /><span>먼저 반영해요.</span></> : null}
+            {isFinal ? <>모든 단서를<br /><span>함께 확인해요.</span></> : null}
+          </h2>
           <div className="generation-denoise-clues" role="list" aria-label="그림을 참고하는 프롬프트 단서">
-            {clues.map((clue) => (
-              <button
-                key={clue.id}
-                className={`generation-denoise-clue ${clue.id === selectedClue?.id ? 'is-selected' : ''}`}
-                type="button"
-                aria-pressed={clue.id === selectedClue?.id}
-                onClick={() => setSelectedClueId(clue.id)}
-                onKeyDown={(event) => handleButtonKeyDown(event, () => setSelectedClueId(clue.id))}
-              >
-                <span>{clue.label}</span><strong>{clue.phrase}</strong>
-              </button>
-            ))}
+            {clues.map((clue) => {
+              const active = activeParts.includes(clue.part)
+              return (
+                <button
+                  key={clue.id}
+                  className={`generation-denoise-clue ${active ? 'is-active' : ''} ${clue.id === selectedClue?.id ? 'is-selected' : ''}`}
+                  type="button"
+                  disabled={!active}
+                  aria-pressed={active ? clue.id === selectedClue?.id : undefined}
+                  onClick={() => setSelectedClueId(clue.id)}
+                  onKeyDown={(event) => handleButtonKeyDown(event, () => setSelectedClueId(clue.id))}
+                >
+                  <span>{clue.label}<em>{active ? '지금' : '대기'}</em></span><strong>{clue.phrase}</strong>
+                </button>
+              )
+            })}
           </div>
           {selectedClue ? <p className="generation-denoise-clue-copy" aria-live="polite"><strong>{selectedClue.areaLabel}</strong>{selectedClue.description}</p> : null}
-          <div className="generation-denoise-inspector__notice">이 강조 표시는 정확한 attention map이나 AI의 생각이 아니라, 학습을 위한 연결 그림이에요.</div>
+          {!selectedClue ? <p className="generation-denoise-clue-copy is-empty" aria-live="polite"><strong>무작위 시작점</strong>아직 주인공, 장소, 스타일 같은 단서를 구체적인 구조로 드러내지 않는 단계예요.</p> : null}
+          <div className="generation-denoise-inspector__notice">단서 순서는 이해를 돕기 위한 교육용 분해예요. 실제 모델에서는 여러 조건이 겹쳐 작용할 수 있어요.</div>
         </aside>
       </div>
       <ImageGenerationActions

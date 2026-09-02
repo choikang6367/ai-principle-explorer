@@ -150,6 +150,7 @@ export interface ImageDenoiseStep {
   imagePath: string
   alt: string
   revealPercent: number
+  activeParts: readonly ImagePromptPart[]
 }
 
 export type ImageComparisonPart = 'place' | 'style' | 'mood'

@@ -30,14 +30,12 @@ type ArtworkIds = {
   glow: string
   softGlow: string
   grain: string
-  noise: string
 }
 
 type ArtworkProps = {
   selections: ImagePromptSelections
   className?: string
   label?: string
-  processStep?: number
 }
 
 const placePalettes: Record<string, Omit<ArtworkPalette, 'highlight' | 'accent' | 'glow' | 'wash'>> = {
@@ -141,14 +139,6 @@ function ArtworkDefinitions({ ids, palette }: { ids: ArtworkIds; palette: Artwor
       <filter id={ids.grain} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
         <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" seed="19" result="texture" />
         <feColorMatrix in="texture" type="saturate" values="0" />
-      </filter>
-      <filter id={ids.noise} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.52" numOctaves="4" seed="37" result="noiseField" />
-        <feColorMatrix
-          in="noiseField"
-          type="matrix"
-          values="1.4 0 0 0 -.15  0 1.1 0 0 -.04  0 0 1.5 0 -.12  0 0 0 1 0"
-        />
       </filter>
     </defs>
   )
@@ -267,24 +257,6 @@ function FineDetailOverlay({ palette, ids }: { palette: ArtworkPalette; ids: Art
         <path d="m151 69 3 7 7 3-7 3-3 7-3-7-7-3 7-3Zm409 85 2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5Z" />
       </g>
       <rect className="generation-art__grain" width="640" height="420" filter={`url(#${ids.grain})`} opacity="0.055" />
-    </g>
-  )
-}
-
-function ProcessNoise({ palette, ids }: { palette: ArtworkPalette; ids: ArtworkIds }) {
-  return (
-    <g className="generation-art__process-noise" pointerEvents="none">
-      <rect width="640" height="420" fill="#0c1830" />
-      <rect width="640" height="420" filter={`url(#${ids.noise})`} opacity="0.88" />
-      <g fill={palette.glow} opacity="0.48">
-        <circle cx="76" cy="76" r="27" /><circle cx="184" cy="138" r="19" /><circle cx="297" cy="61" r="31" />
-        <circle cx="421" cy="156" r="24" /><circle cx="557" cy="91" r="35" /><circle cx="116" cy="288" r="33" />
-        <circle cx="256" cy="341" r="23" /><circle cx="385" cy="273" r="37" /><circle cx="542" cy="330" r="25" />
-      </g>
-      <g fill={palette.accent} opacity="0.42">
-        <rect x="32" y="178" width="54" height="39" rx="12" /><rect x="218" y="213" width="72" height="51" rx="15" />
-        <rect x="470" y="218" width="65" height="43" rx="13" /><rect x="336" y="358" width="51" height="34" rx="11" />
-      </g>
     </g>
   )
 }
@@ -456,7 +428,7 @@ function StyleOverlay({ styleId, palette, ids }: { styleId: string | undefined; 
   )
 }
 
-export function GeneratedArtwork({ selections, className = '', label, processStep }: ArtworkProps) {
+export function GeneratedArtwork({ selections, className = '', label }: ArtworkProps) {
   const artworkId = useId().replace(/:/gu, '')
   const ids: ArtworkIds = {
     sky: `generation-art-sky-${artworkId}`,
@@ -467,7 +439,6 @@ export function GeneratedArtwork({ selections, className = '', label, processSte
     glow: `generation-art-glow-${artworkId}`,
     softGlow: `generation-art-soft-glow-${artworkId}`,
     grain: `generation-art-grain-${artworkId}`,
-    noise: `generation-art-noise-${artworkId}`,
   }
   const subject = getImagePromptChoice('subject', selections.subject) ?? getImagePromptChoice('subject', defaultImagePromptSelections.subject)
   const scene = getImagePromptChoice('scene', selections.scene) ?? getImagePromptChoice('scene', defaultImagePromptSelections.scene)
@@ -485,7 +456,6 @@ export function GeneratedArtwork({ selections, className = '', label, processSte
       data-mood={mood?.id}
       data-subject={subject?.id}
       data-scene={scene?.id}
-      data-process-step={processStep}
       style={generationStyle(selections, palette)}
       role="img"
       aria-label={artLabel}
@@ -503,9 +473,8 @@ export function GeneratedArtwork({ selections, className = '', label, processSte
           </g>
         ) : null}
         <rect className="generation-art__vignette" width="640" height="420" fill="none" stroke={palette.subjectOutline} strokeOpacity="0.2" strokeWidth="24" />
-        <ProcessNoise palette={palette} ids={ids} />
       </svg>
-      <span className="generation-art__badge">{processStep === undefined ? 'EDUCATIONAL COMPOSITE' : `VECTOR REFINEMENT / ${String(processStep + 1).padStart(2, '0')}`}</span>
+      <span className="generation-art__badge">EDUCATIONAL COMPOSITE</span>
       <span className="generation-art__caption">{subject?.shortLabel} · {scene?.shortLabel} · {place?.shortLabel} · {style?.shortLabel}</span>
     </div>
   )
