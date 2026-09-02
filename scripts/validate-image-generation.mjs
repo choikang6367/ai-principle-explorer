@@ -7,6 +7,7 @@ import {
   getImageComparisonSelections,
   getImagePromptChoice,
   getImagePromptClues,
+  getImagePromptPreset,
   getImagePromptSentence,
   imagePromptQualityCues,
   imagePromptQualitySentence,
@@ -14,6 +15,7 @@ import {
   imageComparisonOptions,
   imageDenoiseSteps,
   imagePromptFields,
+  imagePromptPresets,
 } from '../src/data/imageGeneration.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -73,6 +75,36 @@ for (const part of requiredPromptParts) {
 for (const [part, choiceId] of Object.entries(defaultImagePromptSelections)) {
   if (!getImagePromptChoice(part, choiceId)) {
     report(`default prompt selection ${part}/${choiceId} is not a valid choice`)
+  }
+}
+
+if (imagePromptPresets.length !== 3) {
+  report(`expected 3 curated prompt presets, found ${imagePromptPresets.length}`)
+}
+const presetIds = new Set()
+const presetPaths = new Set()
+for (const preset of imagePromptPresets) {
+  if (presetIds.has(preset.id)) {
+    report(`prompt preset ${preset.id} has a duplicate id`)
+  }
+  presetIds.add(preset.id)
+  if (presetPaths.has(preset.imagePath)) {
+    report(`prompt preset ${preset.id} reuses image path ${preset.imagePath}`)
+  }
+  presetPaths.add(preset.imagePath)
+  requireText(preset.title, `prompt preset ${preset.id}.title`)
+  requireText(preset.description, `prompt preset ${preset.id}.description`)
+  requireText(preset.imageAlt, `prompt preset ${preset.id}.imageAlt`)
+  if (!existsSync(join(root, 'public', preset.imagePath))) {
+    report(`prompt preset ${preset.id} image is missing at ${preset.imagePath}`)
+  }
+  for (const [part, choiceId] of Object.entries(preset.selections)) {
+    if (!getImagePromptChoice(part, choiceId)) {
+      report(`prompt preset ${preset.id} has invalid selection ${part}/${choiceId}`)
+    }
+  }
+  if (getImagePromptPreset(preset.selections)?.id !== preset.id) {
+    report(`prompt preset ${preset.id} cannot be resolved from its selections`)
   }
 }
 
@@ -195,5 +227,5 @@ if (errors.length > 0) {
   }
   process.exitCode = 1
 } else {
-  console.log(`Image generation validation passed: ${imagePromptFields.length} prompt fields, ${imageDenoiseSteps.length} denoise stages, ${imageComparisonOptions.length} comparisons, and ${imageCheckItems.length} review checks.`)
+  console.log(`Image generation validation passed: ${imagePromptFields.length} prompt fields, ${imagePromptPresets.length} curated results, ${imageDenoiseSteps.length} denoise stages, ${imageComparisonOptions.length} comparisons, and ${imageCheckItems.length} review checks.`)
 }

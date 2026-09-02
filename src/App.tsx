@@ -34,7 +34,7 @@ import {
 } from './components/ImageGenerationStages'
 import { categories } from './data/categories'
 import { getImageExperienceById, imageExperiences } from './data/imageExperiences'
-import { defaultImagePromptSelections } from './data/imageGeneration'
+import { defaultImagePromptSelections, getImagePromptPreset } from './data/imageGeneration'
 import {
   EXPERIENCE_PROGRESS_VERSION,
   clearSavedProgress,
@@ -47,7 +47,7 @@ import { adaptAttentionTargets, getScenarioById, getScenariosForCategory } from 
 import { createContextualCandidates, runTransformer } from './transformer/engine'
 import { generateAnswer, reviewGeneratedAnswer } from './transformer/generation'
 import { useViewportProfile } from './hooks/useViewportProfile'
-import type { Category, CategoryId, ImageComparisonPart, ImageExperienceId, ImagePromptPart, ImagePromptSelections, InputToken, QuestionType, Scenario, StageId } from './types/experience'
+import type { Category, CategoryId, ImageComparisonPart, ImageExperienceId, ImagePromptSelections, InputToken, QuestionType, Scenario, StageId } from './types/experience'
 
 function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: () => void) {
   if (event.key === 'Enter' || event.key === ' ') {
@@ -779,7 +779,8 @@ function App() {
   const [hasAskedQuestion, setHasAskedQuestion] = useState(initialProgress.hasAskedQuestion)
   const [selectedImageId, setSelectedImageId] = useState<ImageExperienceId | null>(initialProgress.selectedImageId ?? null)
   const [imageStudentGuess, setImageStudentGuess] = useState<string | null>(initialProgress.imageGuess ?? null)
-  const [imagePromptSelections, setImagePromptSelections] = useState<ImagePromptSelections>(initialProgress.imagePromptSelections ?? defaultImagePromptSelections)
+  const restoredImagePromptPreset = getImagePromptPreset(initialProgress.imagePromptSelections ?? defaultImagePromptSelections)
+  const [imagePromptSelections, setImagePromptSelections] = useState<ImagePromptSelections>(restoredImagePromptPreset?.selections ?? defaultImagePromptSelections)
   const [imageDenoiseStep, setImageDenoiseStep] = useState(initialProgress.imageDenoiseStep ?? 0)
   const [imageComparePart, setImageComparePart] = useState<ImageComparisonPart>(initialProgress.imageComparePart ?? 'place')
   const [imageCheckIds, setImageCheckIds] = useState<readonly string[]>(initialProgress.imageCheckIds ?? [])
@@ -908,8 +909,8 @@ function App() {
     setImageStudentGuess(null)
   }
 
-  const handleImagePromptSelect = (part: ImagePromptPart, choiceId: string) => {
-    setImagePromptSelections((current) => ({ ...current, [part]: choiceId }))
+  const handleImagePromptPresetSelect = (selections: ImagePromptSelections) => {
+    setImagePromptSelections(selections)
     setImageDenoiseStep(0)
     setImageComparePart('place')
     setImageCheckIds([])
@@ -1119,7 +1120,7 @@ function App() {
           stage === 'imagePrompt' ? (
             <ImagePromptStage
               selections={imagePromptSelections}
-              onSelect={handleImagePromptSelect}
+              onSelectPreset={handleImagePromptPresetSelect}
               onBack={() => setStage('imageIntro')}
               onNext={() => setStage('imageClues')}
             />

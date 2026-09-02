@@ -117,6 +117,17 @@ export interface ImagePromptSelections {
   mood: string
 }
 
+export interface ImagePromptPreset {
+  id: string
+  number: string
+  title: string
+  description: string
+  imagePath: string
+  imageAlt: string
+  accent: ImageAccent
+  selections: ImagePromptSelections
+}
+
 export interface ImagePromptClue {
   id: string
   part: ImagePromptPart

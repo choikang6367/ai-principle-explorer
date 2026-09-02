@@ -7,6 +7,7 @@ import type {
   ImagePromptClue,
   ImagePromptField,
   ImagePromptPart,
+  ImagePromptPreset,
   ImagePromptSelections,
 } from '../types/experience'
 
@@ -85,6 +86,55 @@ export const defaultImagePromptSelections: ImagePromptSelections = {
   place: 'moon-surface',
   style: 'storybook',
   mood: 'warm-bright',
+}
+
+export const imagePromptPresets = [
+  {
+    id: 'moon-expedition',
+    number: '01',
+    title: '달빛 탐험대',
+    description: '따뜻한 빛과 촘촘한 배경이 살아 있는 동화책 장면',
+    imagePath: 'images/image-generation/results/moon-cat-storybook-v2.jpg',
+    imageAlt: '따뜻한 햇빛이 비치는 달 표면에서 우주복을 입은 고양이가 산호색 깃발을 든 정교한 동화책 그림',
+    accent: 'mint',
+    selections: defaultImagePromptSelections,
+  },
+  {
+    id: 'forest-painter',
+    number: '02',
+    title: '별을 그리는 숲',
+    description: '종이 질감과 번지는 빛을 살린 꿈결 같은 수채화 장면',
+    imagePath: 'images/image-generation/results/forest-fox-watercolor-v2.jpg',
+    imageAlt: '푸른 망토를 입은 여우가 반짝이는 숲에서 붓으로 빛나는 별을 그리는 정교한 수채화 그림',
+    accent: 'coral',
+    selections: {
+      subject: 'cape-fox',
+      scene: 'paint-stars',
+      place: 'sparkle-forest',
+      style: 'watercolor',
+      mood: 'dreamy-soft',
+    },
+  },
+  {
+    id: 'ocean-discovery',
+    number: '03',
+    title: '심해의 발견',
+    description: '빛과 깊이, 또렷한 픽셀을 겹겹이 쌓은 탐사 장면',
+    imagePath: 'images/image-generation/results/ocean-robot-pixel-v2.jpg',
+    imageAlt: '깊은 바닷속에서 작은 탐사 로봇이 민트색으로 빛나는 수정을 살펴보는 정교한 픽셀아트 그림',
+    accent: 'blue',
+    selections: {
+      subject: 'scout-robot',
+      scene: 'find-rock',
+      place: 'deep-ocean',
+      style: 'pixel-art',
+      mood: 'cool-calm',
+    },
+  },
+] as const satisfies readonly ImagePromptPreset[]
+
+export function getImagePromptPreset(selections: ImagePromptSelections) {
+  return imagePromptPresets.find((preset) => imagePromptParts.every((part) => preset.selections[part] === selections[part]))
 }
 
 export const imagePromptQualityCues = ['중앙 구도', '앞·뒤 깊이', '선명한 윤곽', '풍부한 세부'] as const
@@ -252,8 +302,8 @@ export const imageDenoiseSteps = [
     shortLabel: '완성',
     title: '완성된 그림처럼 보이게 정리해요',
     description: '준비된 교육용 단계 그림의 마지막 모습이에요. 실제 모델의 내부 화면을 그대로 보여 주는 것은 아니에요.',
-    imagePath: 'images/image-generation/07-final.svg',
-    alt: '고양이 모양 주인공이 달 표면에서 깃발을 든 교육용 완성 그림 예시',
+    imagePath: 'images/image-generation/results/moon-cat-storybook-v2.jpg',
+    alt: '우주복을 입은 고양이가 달 표면에서 깃발을 든 정교한 동화책 완성 그림 예시',
     revealPercent: 100,
   },
 ] as const satisfies readonly ImageDenoiseStep[]

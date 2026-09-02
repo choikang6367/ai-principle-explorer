@@ -4,12 +4,14 @@ import {
   getImageComparisonSelections,
   getImagePromptChoice,
   getImagePromptClues,
+  getImagePromptPreset,
   getImagePromptSentence,
   imagePromptQualityCues,
   imageCheckItems,
   imageComparisonOptions,
   imageDenoiseSteps,
   imagePromptFields,
+  imagePromptPresets,
 } from '../data/imageGeneration'
 import type {
   ImageCheckItem,
@@ -21,6 +23,7 @@ import type {
   ImagePromptSelections,
 } from '../types/experience'
 import { GeneratedArtwork } from './ImageArtwork'
+import { ImageResultArtwork } from './ImageResultArtwork'
 
 const imageGenerationStageLabels = ['소개', '프롬프트', '의미 단서', '숫자 지도', '노이즈', '여러 번 정리', '잠재 공간', '비교', '검사', '완료']
 const comparisonParts: readonly ImageComparisonPart[] = ['place', 'style', 'mood']
@@ -203,7 +206,7 @@ export function ImageIntroStage({ onBack, onNext }: { onBack: () => void; onNext
       <div className="generation-intro-layout">
         <article className="generation-card generation-intro-card">
           <div className="generation-card__topline"><span>EDUCATIONAL MODEL / IMAGE</span><span>NO API · NO RANDOMNESS</span></div>
-          <GeneratedArtwork selections={defaultImagePromptSelections} className="generation-intro-art" label="우주복을 입은 고양이가 달 표면에 서 있는 교육용 구성 그림" />
+          <ImageResultArtwork selections={defaultImagePromptSelections} className="generation-intro-art" />
           <div className="generation-intro-flow" aria-label="이미지 생성 원리 흐름">
             <span>프롬프트</span><b>→</b><span>숫자 단서</span><b>→</b><span>노이즈</span><b>→</b><span>여러 번 정리</span><b>→</b><span>완성 그림</span>
           </div>
@@ -225,50 +228,19 @@ export function ImageIntroStage({ onBack, onNext }: { onBack: () => void; onNext
   )
 }
 
-function PromptChoice({
-  fieldId,
-  choiceId,
-  label,
-  checked,
-  onSelect,
-}: {
-  fieldId: ImagePromptPart
-  choiceId: string
-  label: string
-  checked: boolean
-  onSelect: () => void
-}) {
-  const choiceOption = getImagePromptChoice(fieldId, choiceId)
-  if (!choiceOption) {
-    return null
-  }
-
-  return (
-    <label className={`generation-prompt-choice ${checked ? 'is-selected' : ''}`} data-accent={choiceOption.accent}>
-      <input type="radio" name={`image-prompt-${fieldId}`} value={choiceId} checked={checked} onChange={onSelect} />
-      <span className="generation-prompt-choice__radio" aria-hidden="true" />
-      <span className="generation-prompt-choice__copy">
-        <span className="generation-prompt-choice__topline"><span>{choiceOption.emoji}</span><span>{checked ? 'SELECTED' : 'CHOOSE'}</span></span>
-        <strong>{label}</strong>
-        <small>{choiceOption.description}</small>
-      </span>
-    </label>
-  )
-}
-
 export function ImagePromptStage({
   selections,
-  onSelect,
+  onSelectPreset,
   onBack,
   onNext,
 }: {
   selections: ImagePromptSelections
-  onSelect: (part: ImagePromptPart, choiceId: string) => void
+  onSelectPreset: (selections: ImagePromptSelections) => void
   onBack: () => void
   onNext: () => void
 }) {
   const promptSentence = getImagePromptSentence(selections)
-  const isComplete = imagePromptFields.every((field) => Boolean(getImagePromptChoice(field.id, selections[field.id])))
+  const selectedPreset = getImagePromptPreset(selections)
 
   return (
     <section className="image-generation-stage generation-stage stage-enter" aria-labelledby="image-generation-prompt-title">
@@ -276,37 +248,39 @@ export function ImagePromptStage({
       <ImageGenerationHeading
         kicker="STEP 01 / BUILD A PROMPT"
         id="image-generation-prompt-title"
-        title={<>그림 안내 카드를<br /></>}
-        accent="하나씩 골라 봐요."
-        description={<>자유 입력만 쓰지 않고, 완성할 수 있는 선택지를 준비했어요.<br />다섯 가지 단서가 한 문장으로 합쳐집니다.</>}
+        title={<>완성도 높은 장면을<br /></>}
+        accent="먼저 골라 봐요."
+        description={<>세 가지 창작 방향에는 주인공부터 색감까지 필요한 단서가 모두 들어 있어요.<br />그림을 고르면 다섯 가지 단서가 한 문장으로 풀립니다.</>}
       />
       <div className="generation-prompt-layout">
         <article className="generation-card generation-prompt-card">
-          <div className="generation-card__topline"><span>CHOOSE YOUR INGREDIENTS</span><span>5 PARTS / DETAIL CUES ADDED</span></div>
-          <div className="generation-prompt-fields">
-            {imagePromptFields.map((field) => (
-              <fieldset className="generation-prompt-field" key={field.id}>
-                <legend><span>{field.englishLabel}</span><strong>{field.label}</strong><small>{field.question}</small></legend>
-                <div className="generation-prompt-options" role="radiogroup" aria-label={`${field.label} 선택`}>
-                  {field.choices.map((choiceOption) => (
-                    <PromptChoice
-                      key={choiceOption.id}
-                      fieldId={field.id}
-                      choiceId={choiceOption.id}
-                      label={choiceOption.label}
-                      checked={selections[field.id] === choiceOption.id}
-                      onSelect={() => onSelect(field.id, choiceOption.id)}
-                    />
-                  ))}
-                </div>
-              </fieldset>
-            ))}
+          <div className="generation-card__topline"><span>CHOOSE A CREATIVE ROUTE</span><span>3 POLISHED RESULTS / 5 CLUES EACH</span></div>
+          <div className="generation-preset-grid" role="radiogroup" aria-label="이미지 창작 방향 선택">
+            {imagePromptPresets.map((preset) => {
+              const selected = selectedPreset?.id === preset.id
+              return (
+                <button
+                  className={`generation-preset-card ${selected ? 'is-selected' : ''}`}
+                  data-accent={preset.accent}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  key={preset.id}
+                  onClick={() => onSelectPreset(preset.selections)}
+                >
+                  <span className="generation-preset-card__image"><img src={assetSource(preset.imagePath)} alt="" /><b>{preset.number}</b></span>
+                  <span className="generation-preset-card__copy"><small>{selected ? 'SELECTED ROUTE' : 'CREATIVE ROUTE'}</small><strong>{preset.title}</strong><span>{preset.description}</span></span>
+                  <span className="generation-preset-card__check" aria-hidden="true">{selected ? '✓' : '↗'}</span>
+                </button>
+              )
+            })}
           </div>
         </article>
         <aside className="generation-prompt-preview generation-info-card">
           <span className="generation-info-card__number">A</span>
-          <p className="generation-info-card__label">완성된 한 문장</p>
-          <h2>AI에게 보낼<br /><span>그림 안내 문장</span></h2>
+          <p className="generation-info-card__label">선택 즉시 결과 확인</p>
+          <h2>이 장면을 만든<br /><span>그림 안내 문장</span></h2>
+          <ImageResultArtwork selections={selections} className="generation-prompt-result" />
           <p className="generation-prompt-preview__sentence" aria-live="polite">{promptSentence || '선택지를 모두 채우면 문장이 완성돼요.'}</p>
           <div className="generation-prompt-preview__tags" aria-label="선택한 프롬프트 단서">
             {imagePromptFields.map((field) => {
@@ -326,7 +300,7 @@ export function ImagePromptStage({
       <ImageGenerationActions
         backLabel="이미지 생성 소개"
         nextLabel="글을 작은 단서로 나누기"
-        nextDisabled={!isComplete}
+        nextDisabled={!selectedPreset}
         onBack={onBack}
         onNext={onNext}
       />
@@ -526,6 +500,10 @@ export function ImageDenoiseStage({
   const [selectedClueId, setSelectedClueId] = useState(clues[0]?.id ?? '')
   const selectedClue = clues.find((clue) => clue.id === selectedClueId) ?? clues[0]
   const isFinal = safeStepIndex === imageDenoiseSteps.length - 1
+  const selectedPreset = getImagePromptPreset(selections)
+  const displayedStep: ImageDenoiseStep = isFinal && selectedPreset
+    ? { ...step, imagePath: selectedPreset.imagePath, alt: selectedPreset.imageAlt }
+    : step
 
   return (
     <section className="image-generation-stage generation-stage stage-enter" aria-labelledby="image-generation-denoise-title">
@@ -541,7 +519,7 @@ export function ImageDenoiseStage({
         <article className="generation-card generation-denoise-card">
           <div className="generation-card__topline"><span>NOISE → STRUCTURE → DETAILS</span><span>{String(safeStepIndex + 1).padStart(2, '0')} / 07</span></div>
           <div className="generation-denoise-image-wrap">
-            <ProcessImage step={step} className="generation-denoise-image" />
+            <ProcessImage step={displayedStep} className="generation-denoise-image" />
             <div className="generation-denoise-progress" style={{ width: `${step.revealPercent}%` }} aria-hidden="true" />
           </div>
           <div className="generation-denoise-current" aria-live="polite">
@@ -638,7 +616,7 @@ export function ImageLatentStage({
             <div className="generation-latent-arrow" aria-hidden="true">→</div>
             <div className="generation-decoder"><span className="generation-decoder__label">디코더</span><div className="generation-decoder__stack" aria-hidden="true"><i /><i /><i /></div><strong>사람이 보는 그림으로</strong><small>표현을 펼쳐요</small></div>
             <div className="generation-latent-arrow" aria-hidden="true">→</div>
-            <GeneratedArtwork selections={selections} className="generation-latent-art" />
+            <ImageResultArtwork selections={selections} className="generation-latent-art" />
           </div>
           <div className="generation-latent-caption"><span>비유로 이해하기</span><p>작은 작업실은 그림의 중요한 특징을 압축해서 다루는 공간을 떠올리게 해요. 실제 모델의 구조와 크기는 모델마다 다릅니다.</p></div>
         </article>
@@ -804,7 +782,7 @@ export function ImageCheckStage({
         <article className="generation-card generation-check-card">
           <div className="generation-card__topline"><span>FINAL REVIEW / HUMAN CHECK</span><span>{completedCount} / {imageCheckItems.length} CHECKED</span></div>
           <div className="generation-check-preview">
-            <GeneratedArtwork selections={selections} className="generation-check-art" label={`검사할 교육용 완성 구성 그림: ${getImagePromptSentence(selections)}`} />
+            <ImageResultArtwork selections={selections} className="generation-check-art" label={`검사할 완성 그림: ${getImagePromptSentence(selections)}`} />
             <div className="generation-check-prompt"><span>처음 만든 프롬프트</span><p>{getImagePromptSentence(selections)}</p></div>
           </div>
           <div className="generation-checklist" role="group" aria-label="이미지 결과 검사 항목">
@@ -874,7 +852,7 @@ export function ImageCompleteStage({
         <article className="generation-card generation-complete-card">
           <div className="generation-card__topline"><span>IMAGE GENERATION / COMPLETE</span><span className="generation-complete-status"><i aria-hidden="true" /> SAVED</span></div>
           <div className="generation-complete-hero">
-            <GeneratedArtwork selections={selections} className="generation-complete-art" label={`완료된 교육용 구성 그림: ${getImagePromptSentence(selections)}`} />
+            <ImageResultArtwork selections={selections} className="generation-complete-art" label={`완료된 그림: ${getImagePromptSentence(selections)}`} />
             <div className="generation-complete-prompt"><span>처음 만든 프롬프트</span><p>{getImagePromptSentence(selections)}</p></div>
           </div>
           <div className="generation-complete-summary-grid">
