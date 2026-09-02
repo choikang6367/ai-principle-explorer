@@ -5090,7 +5090,7 @@ body {
 
 .mode-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 17px;
   margin-top: 51px;
 }
@@ -5126,8 +5126,13 @@ body {
   --mode-accent: var(--mint);
 }
 
-.mode-card--image {
+.mode-card--image,
+.mode-card--generation {
   --mode-accent: var(--violet);
+}
+
+.mode-card--reading {
+  --mode-accent: var(--blue);
 }
 
 .mode-card:hover,
@@ -5198,6 +5203,24 @@ body {
   background:
     radial-gradient(circle at 35% 60%, rgba(185, 164, 255, 0.2), transparent 30%),
     linear-gradient(135deg, rgba(43, 35, 76, 0.7), rgba(10, 29, 46, 0.9));
+}
+
+.mode-card__visual--reading {
+  background:
+    radial-gradient(circle at 68% 32%, rgba(142, 203, 255, 0.2), transparent 28%),
+    linear-gradient(135deg, rgba(28, 62, 84, 0.72), rgba(10, 29, 46, 0.9));
+}
+
+.mode-card__visual--reading .mode-card__pixel-orb {
+  color: #10283b;
+  background: var(--blue);
+  box-shadow: 0 0 0 12px rgba(142, 203, 255, 0.08), 0 0 34px rgba(142, 203, 255, 0.28);
+}
+
+.mode-card__visual--reading .mode-card__pixel-grid {
+  background-image:
+    linear-gradient(rgba(190, 228, 255, 0.32) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(190, 228, 255, 0.32) 1px, transparent 1px);
 }
 
 .mode-card__bubble {
@@ -6752,6 +6775,10 @@ body {
 }
 
 @media (max-width: 1000px) {
+  .mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .image-selection-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }

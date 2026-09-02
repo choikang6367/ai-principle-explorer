@@ -13,6 +13,14 @@ import {
 } from './components/ScenarioStages'
 import { StageProgress } from './components/StageProgress'
 import {
+  ImageFeaturesStage,
+  ImageNumbersStage,
+  ImagePredictionStage,
+  ImageResultStage,
+  ImageSelectionStage,
+  ImageViewStage,
+} from './components/ImageExperienceStages'
+import {
   ImageCheckStage,
   ImageCluesStage,
   ImageCompareStage,
@@ -25,6 +33,7 @@ import {
   ImagePromptStage,
 } from './components/ImageGenerationStages'
 import { categories } from './data/categories'
+import { getImageExperienceById, imageExperiences } from './data/imageExperiences'
 import { defaultImagePromptSelections } from './data/imageGeneration'
 import {
   EXPERIENCE_PROGRESS_VERSION,
@@ -38,7 +47,7 @@ import { adaptAttentionTargets, getScenarioById, getScenariosForCategory } from 
 import { createContextualCandidates, runTransformer } from './transformer/engine'
 import { generateAnswer, reviewGeneratedAnswer } from './transformer/generation'
 import { useViewportProfile } from './hooks/useViewportProfile'
-import type { Category, CategoryId, ImageComparisonPart, ImagePromptPart, ImagePromptSelections, InputToken, QuestionType, Scenario, StageId } from './types/experience'
+import type { Category, CategoryId, ImageComparisonPart, ImageExperienceId, ImagePromptPart, ImagePromptSelections, InputToken, QuestionType, Scenario, StageId } from './types/experience'
 
 function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: () => void) {
   if (event.key === 'Enter' || event.key === ' ') {
@@ -62,6 +71,12 @@ const previousStageByStage: Partial<Record<StageId, StageId>> = {
   review: 'generation',
   compare: 'review',
   complete: 'compare',
+  imageReadSelect: 'welcome',
+  imageReadView: 'imageReadSelect',
+  imageReadNumbers: 'imageReadView',
+  imageReadFeatures: 'imageReadNumbers',
+  imageReadPrediction: 'imageReadFeatures',
+  imageReadResult: 'imageReadPrediction',
   imageIntro: 'welcome',
   imagePrompt: 'imageIntro',
   imageClues: 'imagePrompt',
@@ -89,6 +104,11 @@ const globalEnterSelectorByStage: Partial<Record<StageId, string>> = {
   generation: '.scenario-stage-actions .primary-button:not(:disabled)',
   review: '.scenario-stage-actions .primary-button:not(:disabled)',
   compare: '.scenario-stage-actions .primary-button:not(:disabled)',
+  imageReadSelect: '.image-selection-start:not(:disabled)',
+  imageReadView: '.image-stage-actions .primary-button:not(:disabled)',
+  imageReadNumbers: '.image-stage-actions .primary-button:not(:disabled)',
+  imageReadFeatures: '.image-stage-actions .primary-button:not(:disabled)',
+  imageReadPrediction: '.image-stage-actions .primary-button:not(:disabled)',
   imageIntro: '.generation-actions .generation-next:not(:disabled)',
   imagePrompt: '.generation-actions .generation-next:not(:disabled)',
   imageClues: '.generation-actions .generation-next:not(:disabled)',
@@ -147,10 +167,12 @@ function MobileSelectionDock({
 
 function HomeStage({
   onChooseConversation,
+  onChooseImageReading,
   onChooseImage,
   firstCardRef,
 }: {
   onChooseConversation: () => void
+  onChooseImageReading: () => void
   onChooseImage: () => void
   firstCardRef: RefObject<HTMLButtonElement | null>
 }) {
@@ -159,7 +181,7 @@ function HomeStage({
       <div className="home-stage__topline">
         <p className="eyebrow">
           <span className="eyebrow__marker" aria-hidden="true" />
-          AI 원리 탐험 <span className="eyebrow__slash">/</span> 두 가지 체험
+          AI 원리 탐험 <span className="eyebrow__slash">/</span> 세 가지 체험
         </p>
         <span className="home-stage__status"><span className="status-dot" aria-hidden="true" /> READY TO EXPLORE</span>
       </div>
@@ -169,11 +191,11 @@ function HomeStage({
           <h1 id="home-title" tabIndex={-1}>
             생성형 AI를
             <br />
-            <span>두 가지 눈으로 봐요.</span>
+            <span>세 가지 눈으로 봐요.</span>
           </h1>
         </div>
         <p className="home-stage__description">
-          AI는 어떻게 말을 만들고, 글로 그림을 만들어 갈까요?
+          AI는 어떻게 말을 만들고, 사진을 읽고, 글로 그림을 만들어 갈까요?
           <br />
           궁금한 체험을 하나 골라 직접 따라가 봐요.
         </p>
@@ -203,13 +225,35 @@ function HomeStage({
           </span>
         </button>
         <button
-          className="mode-card mode-card--image"
+          className="mode-card mode-card--reading"
+          type="button"
+          onClick={onChooseImageReading}
+          onKeyDown={(event) => handleButtonKeyDown(event, onChooseImageReading)}
+        >
+          <span className="mode-card__topline">
+            <span>EXPERIENCE 02</span>
+            <span>PIXELS / IMAGE</span>
+          </span>
+          <span className="mode-card__visual mode-card__visual--reading" aria-hidden="true">
+            <span className="mode-card__pixel-orb">◎</span>
+            <span className="mode-card__pixel-grid" />
+            <span className="mode-card__signal">+</span>
+          </span>
+          <span className="mode-card__title">이미지를 읽을 때의 생성형 AI</span>
+          <span className="mode-card__description">AI는 사진을 어떻게 숫자와 특징으로 보고 무엇인지 알아갈까요?</span>
+          <span className="mode-card__footer">
+            <span>사진 → 픽셀 → 특징 → 가능성</span>
+            <span className="mode-card__arrow" aria-hidden="true">↗</span>
+          </span>
+        </button>
+        <button
+          className="mode-card mode-card--generation"
           type="button"
           onClick={onChooseImage}
           onKeyDown={(event) => handleButtonKeyDown(event, onChooseImage)}
         >
           <span className="mode-card__topline">
-            <span>EXPERIENCE 02</span>
+            <span>EXPERIENCE 03</span>
             <span>PROMPTS / IMAGE</span>
           </span>
           <span className="mode-card__visual mode-card__visual--image" aria-hidden="true">
@@ -227,7 +271,7 @@ function HomeStage({
       </div>
       <div className="home-stage__principle">
         <span className="home-stage__principle-mark" aria-hidden="true">i</span>
-        <p>두 체험의 공통점: AI는 입력을 숫자로 바꾸고, 배운 패턴을 이용해 다음 결과를 예상해요.</p>
+        <p>세 체험의 공통점: AI는 입력을 숫자로 바꾸고, 배운 패턴을 이용해 다음 결과를 예상해요.</p>
         <span className="keyboard-hint"><kbd>Enter</kbd><span>첫 번째 체험 시작</span></span>
       </div>
     </section>
@@ -733,12 +777,15 @@ function App() {
   const [studentCandidateId, setStudentCandidateId] = useState<string | null>(initialProgress.studentCandidateId)
   const [customInputTokenTexts, setCustomInputTokenTexts] = useState<readonly string[] | null>(initialProgress.selectedInputTokenTexts)
   const [hasAskedQuestion, setHasAskedQuestion] = useState(initialProgress.hasAskedQuestion)
+  const [selectedImageId, setSelectedImageId] = useState<ImageExperienceId | null>(initialProgress.selectedImageId ?? null)
+  const [imageStudentGuess, setImageStudentGuess] = useState<string | null>(initialProgress.imageGuess ?? null)
   const [imagePromptSelections, setImagePromptSelections] = useState<ImagePromptSelections>(initialProgress.imagePromptSelections ?? defaultImagePromptSelections)
   const [imageDenoiseStep, setImageDenoiseStep] = useState(initialProgress.imageDenoiseStep ?? 0)
   const [imageComparePart, setImageComparePart] = useState<ImageComparisonPart>(initialProgress.imageComparePart ?? 'place')
   const [imageCheckIds, setImageCheckIds] = useState<readonly string[]>(initialProgress.imageCheckIds ?? [])
   const homeButtonRef = useRef<HTMLButtonElement | null>(null)
   const startButtonRef = useRef<HTMLButtonElement | null>(null)
+  const imageRefs = useRef<Array<HTMLButtonElement | null>>([])
   const categoryRefs = useRef<Array<HTMLButtonElement | null>>([])
   const scenarioRefs = useRef<Array<HTMLButtonElement | null>>([])
   const attentionRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -773,12 +820,14 @@ function App() {
       selectedAttentionTokenId,
       studentCandidateId,
       hasAskedQuestion,
+      selectedImageId,
+      imageGuess: imageStudentGuess,
       imagePromptSelections,
       imageDenoiseStep,
       imageComparePart,
       imageCheckIds,
     })
-  }, [stage, selectedCategory, selectedScenarioId, customInputTokenTexts, selectedAttentionTokenId, studentCandidateId, hasAskedQuestion, imagePromptSelections, imageDenoiseStep, imageComparePart, imageCheckIds])
+  }, [stage, selectedCategory, selectedScenarioId, customInputTokenTexts, selectedAttentionTokenId, studentCandidateId, hasAskedQuestion, selectedImageId, imageStudentGuess, imagePromptSelections, imageDenoiseStep, imageComparePart, imageCheckIds])
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: WindowEventMap['keydown']) => {
@@ -844,6 +893,21 @@ function App() {
     candidateRefs.current = []
   }
 
+  const resetImageExperience = () => {
+    setSelectedImageId(null)
+    setImageStudentGuess(null)
+    imageRefs.current = []
+  }
+
+  const handleImageSelect = (imageId: string) => {
+    const imageExperience = getImageExperienceById(imageId)
+    if (!imageExperience) {
+      return
+    }
+    setSelectedImageId(imageExperience.id)
+    setImageStudentGuess(null)
+  }
+
   const handleImagePromptSelect = (part: ImagePromptPart, choiceId: string) => {
     setImagePromptSelections((current) => ({ ...current, [part]: choiceId }))
     setImageDenoiseStep(0)
@@ -868,6 +932,7 @@ function App() {
 
   const selectedCategoryData = categories.find((category) => category.id === selectedCategory)
   const selectedScenario = selectedScenarioId ? getScenarioById(selectedScenarioId) : undefined
+  const selectedImageData = getImageExperienceById(selectedImageId)
   const customInputTokens = selectedScenario && customInputTokenTexts
     ? createActiveInputTokens(selectedScenario.id, customInputTokenTexts)
     : null
@@ -912,7 +977,8 @@ function App() {
       : [],
     [generatedStudentAnswer, selectedScenario],
   )
-  const isImageFlowStage = stage === 'imagePrompt' || stage === 'imageClues' || stage === 'imageMap' || stage === 'imageNoise' || stage === 'imageDenoise' || stage === 'imageLatent' || stage === 'imageCompare' || stage === 'imageCheck' || stage === 'imageComplete'
+  const isImageReadingStage = stage === 'imageReadSelect' || stage === 'imageReadView' || stage === 'imageReadNumbers' || stage === 'imageReadFeatures' || stage === 'imageReadPrediction' || stage === 'imageReadResult'
+  const isImageGenerationStage = stage === 'imagePrompt' || stage === 'imageClues' || stage === 'imageMap' || stage === 'imageNoise' || stage === 'imageDenoise' || stage === 'imageLatent' || stage === 'imageCompare' || stage === 'imageCheck' || stage === 'imageComplete'
 
   return (
     <div
@@ -951,6 +1017,7 @@ function App() {
         {stage === 'welcome' ? (
           <HomeStage
             onChooseConversation={() => setStage('conversationWelcome')}
+            onChooseImageReading={() => setStage('imageReadSelect')}
             onChooseImage={() => setStage('imageIntro')}
             firstCardRef={homeButtonRef}
           />
@@ -975,7 +1042,80 @@ function App() {
           />
         ) : stage === 'imageIntro' ? (
           <ImageIntroStage onBack={() => setStage('welcome')} onNext={() => setStage('imagePrompt')} />
-        ) : isImageFlowStage ? (
+        ) : isImageReadingStage ? (
+          stage === 'imageReadSelect' ? (
+            <ImageSelectionStage
+              experiences={imageExperiences}
+              selectedImageId={selectedImageId}
+              imageRefs={imageRefs}
+              onSelect={handleImageSelect}
+              onContinue={() => {
+                if (selectedImageData) {
+                  setImageStudentGuess(null)
+                  setStage('imageReadView')
+                }
+              }}
+              onBack={() => setStage('welcome')}
+            />
+          ) : selectedImageData ? (
+            stage === 'imageReadView' ? (
+              <ImageViewStage
+                experience={selectedImageData}
+                selectedGuess={imageStudentGuess}
+                onSelectGuess={setImageStudentGuess}
+                onBack={() => setStage('imageReadSelect')}
+                onNext={() => setStage('imageReadNumbers')}
+              />
+            ) : stage === 'imageReadNumbers' ? (
+              <ImageNumbersStage
+                experience={selectedImageData}
+                onBack={() => setStage('imageReadView')}
+                onNext={() => setStage('imageReadFeatures')}
+              />
+            ) : stage === 'imageReadFeatures' ? (
+              <ImageFeaturesStage
+                experience={selectedImageData}
+                onBack={() => setStage('imageReadNumbers')}
+                onNext={() => setStage('imageReadPrediction')}
+              />
+            ) : stage === 'imageReadPrediction' ? (
+              <ImagePredictionStage
+                experience={selectedImageData}
+                onBack={() => setStage('imageReadFeatures')}
+                onNext={() => setStage('imageReadResult')}
+              />
+            ) : (
+              <ImageResultStage
+                experience={selectedImageData}
+                selectedGuess={imageStudentGuess}
+                onBack={() => setStage('imageReadPrediction')}
+                onOtherImage={() => {
+                  resetImageExperience()
+                  setStage('imageReadSelect')
+                }}
+                onRestart={() => {
+                  clearSavedProgress()
+                  resetImageExperience()
+                  setStage('welcome')
+                }}
+              />
+            )
+          ) : (
+            <ImageSelectionStage
+              experiences={imageExperiences}
+              selectedImageId={selectedImageId}
+              imageRefs={imageRefs}
+              onSelect={handleImageSelect}
+              onContinue={() => {
+                if (selectedImageData) {
+                  setImageStudentGuess(null)
+                  setStage('imageReadView')
+                }
+              }}
+              onBack={() => setStage('welcome')}
+            />
+          )
+        ) : isImageGenerationStage ? (
           stage === 'imagePrompt' ? (
             <ImagePromptStage
               selections={imagePromptSelections}

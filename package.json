@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node --experimental-strip-types scripts/validate-safety.mjs && node --experimental-strip-types scripts/validate-transformer.mjs && node --experimental-strip-types scripts/validate-scenarios.mjs && node --experimental-strip-types scripts/validate-image-generation.mjs && node --experimental-strip-types scripts/validate-progress.mjs",
+    "test": "node --experimental-strip-types scripts/validate-safety.mjs && node --experimental-strip-types scripts/validate-transformer.mjs && node --experimental-strip-types scripts/validate-scenarios.mjs && node --experimental-strip-types scripts/validate-image-experiences.mjs && node --experimental-strip-types scripts/validate-image-generation.mjs && node --experimental-strip-types scripts/validate-progress.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

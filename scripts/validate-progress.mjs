@@ -129,8 +129,28 @@ assert.deepEqual(
     selectedImageId: 'cat',
     imageGuess: '고양이',
   }),
-  { ...emptyProgress, stage: 'imagePrompt' },
-  'legacy image-reading stages should migrate to the new prompt lesson safely',
+  { ...emptyProgress, stage: 'imageReadResult', selectedImageId: 'cat', imageGuess: '고양이' },
+  'legacy image-reading stages should migrate to the restored image-reading lesson safely',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION,
+    stage: 'imageReadFeatures',
+    selectedImageId: 'bicycle',
+    imageGuess: '자전거',
+  }),
+  { ...emptyProgress, stage: 'imageReadFeatures', selectedImageId: 'bicycle', imageGuess: '자전거' },
+  'current image-reading progress should restore its selected photo and guess',
+)
+assert.deepEqual(
+  readWith({
+    version: EXPERIENCE_PROGRESS_VERSION,
+    stage: 'imageReadPrediction',
+    selectedImageId: 'not-an-image',
+    imageGuess: 'not-a-choice',
+  }),
+  { ...emptyProgress, stage: 'imageReadSelect', selectedImageId: null, imageGuess: null },
+  'invalid image-reading selections should fall back to photo selection',
 )
 assert.deepEqual(
   readWith({

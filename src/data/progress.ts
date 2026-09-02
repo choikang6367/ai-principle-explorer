@@ -5,8 +5,9 @@ import {
   imageDenoiseSteps,
   isCompleteImagePromptSelections,
 } from './imageGeneration.ts'
+import { getImageExperienceById, imageExperienceIds } from './imageExperiences.ts'
 import { getScenarioById } from './scenarios.ts'
-import type { CategoryId, ImageComparisonPart, ImagePromptSelections, StageId } from '../types/experience'
+import type { CategoryId, ImageComparisonPart, ImageExperienceId, ImagePromptSelections, StageId } from '../types/experience'
 
 export const EXPERIENCE_PROGRESS_VERSION = 7 as const
 export const PROGRESS_STORAGE_KEY = 'ai-principle-explorer-progress'
@@ -29,6 +30,12 @@ const stageOrder: readonly StageId[] = [
   'review',
   'compare',
   'complete',
+  'imageReadSelect',
+  'imageReadView',
+  'imageReadNumbers',
+  'imageReadFeatures',
+  'imageReadPrediction',
+  'imageReadResult',
   'imageIntro',
   'imagePrompt',
   'imageClues',
@@ -41,7 +48,16 @@ const stageOrder: readonly StageId[] = [
   'imageComplete',
 ]
 
-const imageStageOrder: readonly StageId[] = [
+const imageReadingStageOrder: readonly StageId[] = [
+  'imageReadSelect',
+  'imageReadView',
+  'imageReadNumbers',
+  'imageReadFeatures',
+  'imageReadPrediction',
+  'imageReadResult',
+]
+
+const imageGenerationStageOrder: readonly StageId[] = [
   'imageIntro',
   'imagePrompt',
   'imageClues',
@@ -55,12 +71,12 @@ const imageStageOrder: readonly StageId[] = [
 ]
 
 const legacyImageStageMap: Partial<Record<StageId, StageId>> = {
-  imageSelect: 'imageIntro',
-  imageView: 'imagePrompt',
-  imageNumbers: 'imageClues',
-  imageFeatures: 'imageMap',
-  imagePrediction: 'imageNoise',
-  imageResult: 'imageDenoise',
+  imageSelect: 'imageReadSelect',
+  imageView: 'imageReadView',
+  imageNumbers: 'imageReadNumbers',
+  imageFeatures: 'imageReadFeatures',
+  imagePrediction: 'imageReadPrediction',
+  imageResult: 'imageReadResult',
 }
 
 const legacyImageStageIds = new Set(Object.keys(legacyImageStageMap))
@@ -80,6 +96,8 @@ export interface ExperienceProgress {
   imageDenoiseStep?: number
   imageComparePart?: ImageComparisonPart | null
   imageCheckIds?: readonly string[] | null
+  selectedImageId?: ImageExperienceId | null
+  imageGuess?: string | null
 }
 
 function emptyProgress(): ExperienceProgress {
@@ -107,8 +125,16 @@ function isCategoryId(value: unknown): value is CategoryId {
   return typeof value === 'string' && categoryIds.has(value as CategoryId)
 }
 
-function isImageStageId(value: StageId): value is Extract<StageId, `image${string}`> {
-  return imageStageOrder.includes(value)
+function isImageExperienceId(value: unknown): value is ImageExperienceId {
+  return typeof value === 'string' && imageExperienceIds.has(value as ImageExperienceId)
+}
+
+function isImageReadingStageId(value: StageId) {
+  return imageReadingStageOrder.includes(value)
+}
+
+function isImageGenerationStageId(value: StageId) {
+  return imageGenerationStageOrder.includes(value)
 }
 
 function isAtOrAfter(stage: StageId, checkpoint: StageId) {
@@ -116,7 +142,7 @@ function isAtOrAfter(stage: StageId, checkpoint: StageId) {
 }
 
 function isAtOrAfterImageStage(stage: StageId, checkpoint: StageId) {
-  return imageStageOrder.indexOf(stage) >= imageStageOrder.indexOf(checkpoint)
+  return imageGenerationStageOrder.indexOf(stage) >= imageGenerationStageOrder.indexOf(checkpoint)
 }
 
 function readImagePromptSelections(value: unknown): ImagePromptSelections | null {
@@ -174,7 +200,25 @@ export function readSavedProgress(): ExperienceProgress {
     const parsedStage = isStageId(parsed.stage) ? parsed.stage : 'welcome'
     const storedStage = legacyImageStageMap[parsedStage] ?? parsedStage
 
-    if (isImageStageId(storedStage)) {
+    if (isImageReadingStageId(storedStage)) {
+      const selectedImageId = isImageExperienceId(parsed.selectedImageId) ? parsed.selectedImageId : null
+      const selectedImage = getImageExperienceById(selectedImageId)
+      const safeImageStage = storedStage !== 'imageReadSelect' && !selectedImage
+        ? 'imageReadSelect'
+        : storedStage
+      const imageGuess = selectedImage && typeof parsed.imageGuess === 'string' && selectedImage.choices.some((choice) => choice === parsed.imageGuess)
+        ? parsed.imageGuess
+        : null
+
+      return {
+        ...fallback,
+        stage: safeImageStage,
+        selectedImageId: selectedImage?.id ?? null,
+        imageGuess,
+      }
+    }
+
+    if (isImageGenerationStageId(storedStage)) {
       const imagePromptSelections = readImagePromptSelections(parsed.imagePromptSelections)
       let safeImageStage = storedStage
       if (safeImageStage !== 'imageIntro' && !imagePromptSelections) {

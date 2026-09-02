@@ -326,7 +326,7 @@ export function ImageIntroStage({ onBack, onNext }: { onBack: () => void; onNext
           <div className="generation-info-card__badge">모델마다 구조와 생성 방식은 다를 수 있어요.</div>
         </aside>
       </div>
-      <ImageGenerationActions backLabel="두 탐험 고르기" nextLabel="이미지 프롬프트 만들기" onBack={onBack} onNext={onNext} />
+      <ImageGenerationActions backLabel="세 체험 고르기" nextLabel="이미지 프롬프트 만들기" onBack={onBack} onNext={onNext} />
     </section>
   )
 }
