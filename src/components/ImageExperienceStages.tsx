@@ -15,9 +15,10 @@ function handleButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>, action: ()
   }
 }
 
-function imageStyle(experience: ImageExperience): CSSProperties {
+function imageStyle(experience: ImageExperience, assetAspectRatio: string | null): CSSProperties {
   return {
     '--image-accent': `var(--${experience.accent})`,
+    ...(assetAspectRatio ? { aspectRatio: assetAspectRatio } : {}),
   } as CSSProperties
 }
 
@@ -39,6 +40,7 @@ function ImageVisual({
   interactive?: boolean
 }) {
   const [assetState, setAssetState] = useState<'pending' | 'loaded' | 'failed'>('pending')
+  const [assetAspectRatio, setAssetAspectRatio] = useState<string | null>(null)
 
   return (
     <div
@@ -47,7 +49,7 @@ function ImageVisual({
       data-surface={experience.visual.background}
       role={interactive ? 'group' : 'img'}
       aria-label={ariaLabel ?? `${experience.name} 이미지`}
-      style={imageStyle(experience)}
+      style={imageStyle(experience, assetAspectRatio)}
     >
       <div className={`image-visual__placeholder ${assetState === 'loaded' ? 'is-hidden' : ''}`} aria-hidden="true">
         <span className="image-visual__placeholder-kicker">IMAGE SAMPLE</span>
@@ -59,7 +61,13 @@ function ImageVisual({
         src={assetSource(experience.imagePath)}
         alt=""
         aria-hidden="true"
-        onLoad={() => setAssetState('loaded')}
+        onLoad={(event) => {
+          const { naturalWidth, naturalHeight } = event.currentTarget
+          if (naturalWidth > 0 && naturalHeight > 0) {
+            setAssetAspectRatio(`${naturalWidth} / ${naturalHeight}`)
+          }
+          setAssetState('loaded')
+        }}
         onError={() => setAssetState('failed')}
       />
       <div className="image-visual__grain" aria-hidden="true" />

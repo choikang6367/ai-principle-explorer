@@ -6242,6 +6242,7 @@ body {
   z-index: 6;
   display: block;
   padding: 0;
+  --feature-highlight-ink: var(--mint);
   color: var(--mint);
   text-align: left;
   background: rgba(137, 245, 197, 0.08);
@@ -6253,11 +6254,13 @@ body {
 }
 
 .feature-highlight--color {
+  --feature-highlight-ink: var(--amber);
   color: var(--amber);
   background: rgba(255, 211, 124, 0.08);
 }
 
 .feature-highlight--shape {
+  --feature-highlight-ink: var(--blue);
   color: var(--blue);
   background: rgba(142, 203, 255, 0.08);
 }
@@ -6288,7 +6291,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.04em;
   white-space: nowrap;
-  background: currentColor;
+  background: var(--feature-highlight-ink);
   border-radius: 3px;
 }
 
